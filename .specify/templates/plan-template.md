@@ -40,7 +40,38 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify against `.specify/memory/constitution.md` (Surf Forecast La Paloma).
+Any FAIL that must proceed requires an entry in Complexity Tracking.
+
+- [ ] **I. Zero cost / personal use**: No paid APIs, subscriptions, or commercial
+      licenses; free-tier limits documented if used
+- [ ] **II. On-demand execution**: No always-on servers, daemons, or permanent
+      infra; run explains which data it used
+- [ ] **III. Configurable criteria**: Thresholds/weights/formulas are versioned
+      and replaceable without rewriting the whole system
+- [ ] **IV. Modular simplicity**: Data fetch, storage, evaluation, and
+      presentation stay separable; no unjustified abstractions/deps
+- [ ] **V. Honest uncertainty**: Scores are not sold as success probabilities
+      unless calibrated; gaps/discrepancies are visible
+- [ ] **VI. Inform, don't decide**: Output supports user judgment; no
+      surfacable-wave guarantees or safety substitution
+- [ ] **VII. Reality validation**: Improvements tied to observations / documented
+      comparisons when claiming superiority
+- [ ] **VIII. No invented/confused data**: Units, coords, peak orientation
+      verified; observed vs model vs derived distinguished; offshore ≠ beach
+      breaking height; unknowns labeled
+- [ ] **IX. Traceability**: Evaluation links inputs, sources, reference time,
+      rules, and criteria version
+- [ ] **X. Simplicity first**: Smallest path to useful, transparent, verifiable
+      evaluations; new pieces need concrete benefit
+- [ ] **XI. Pragmatic verification**: Real swell/wind cases + manual review;
+      small focused tests only where they cut regression risk (calcs/thresholds)
+- [ ] **XII. Graceful degradation**: Source failure → partial valid results +
+      explicit gaps; confidence MUST NOT rise when data is missing
+- [ ] **XIII. Privacy / minimal scope**: No multi-user auth, payments,
+      telemetry, or personal-data collection unless scope is explicitly changed
+- [ ] **XIV. Implementation discipline**: Ambiguity → simplest free verifiable
+      reversible option; cost/complexity/deps justified before build
 
 ## Project Structure
 

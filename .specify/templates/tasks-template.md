@@ -9,9 +9,16 @@ description: "Task list template for feature implementation"
 
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: Tests are OPTIONAL and MUST stay pragmatic (constitution XI). Prefer
+small focused tests for calculations, thresholds, and data transforms when they
+cut regression risk. Do NOT assume complex CI or full automated suites by default.
+Include test tasks only when the spec requests them or when risk clearly warrants them.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+
+**Constitution notes**: Prefer modular boundaries (fetch / store / evaluate /
+present). Do NOT add multi-user auth, payments, telemetry, or always-on infra
+unless the spec explicitly amends scope. Prefer free, reversible increments.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -63,12 +70,12 @@ description: "Task list template for feature implementation"
 
 Examples of foundational tasks (adjust based on your project):
 
-- [ ] T004 Setup database schema and migrations framework
-- [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] Setup API routing and middleware structure
+- [ ] T004 Setup local storage / data layout (no permanent server assumed)
+- [ ] T005 [P] Define interfaces for data sources (swappable providers)
+- [ ] T006 [P] Define versioned evaluation criteria / config shape
 - [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
-- [ ] T009 Setup environment configuration management
+- [ ] T008 Configure error handling with graceful degradation (partial data + explicit gaps)
+- [ ] T009 Setup environment / free-tier source configuration (document quota limits)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

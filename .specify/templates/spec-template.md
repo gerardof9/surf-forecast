@@ -129,3 +129,21 @@
 - [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
 - [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
 - [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+
+## Constitution Constraints *(mandatory alignment)*
+
+<!--
+  Specs MUST stay consistent with `.specify/memory/constitution.md`.
+  Call out any tension with principles explicitly; do not bury it.
+-->
+
+- **Personal / zero cost**: Feature MUST NOT require paid services or introduce
+  mandatory costs; free-tier limits MUST be stated when relevant
+- **On-demand**: Feature MUST NOT assume always-on infrastructure
+- **Honesty**: Uncertainty, missing data, and source disagreement MUST be
+  representable in acceptance scenarios; scores are indicators, not guarantees
+- **Data integrity**: Observed vs forecast vs derived MUST not be conflated;
+  unknown values MUST NOT be silently invented
+- **Out of scope by default**: Multi-user accounts, payments, telemetry, and
+  personal-data collection are out of scope unless the constitution scope is
+  expressly amended
