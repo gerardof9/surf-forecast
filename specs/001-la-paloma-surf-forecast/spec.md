@@ -28,9 +28,33 @@
 
 **Out of scope (first delivery and until expressly added)**: otras zonas (p. ej. La Pedrera), uso comercial/multiusuario/cuentas/pagos, alertas o procesos autónomos, interfaces gráficas o web, marea, extracción automática de sitios de pronóstico, modelos propios de propagación/hidrodinámica costera, presentar probabilidad de acierto sin contrastar con observaciones.
 
+## Clarifications
+
+### Session 2026-10-13
+
+- Q: How should estimated size and quality factors map into the ordinal condition scale above “Sin olas surfeables”? → A: Size bands set the ceiling; unfavorable wind/period/direction may lower the grade by at most one step (Option B)
+- Q: How long may previously downloaded forecast data be reused before a new fetch is required (unless the user forces refresh)? → A: 3 hours (Option B)
+- Q: How should the fixed daily analysis window be defined (FR-020)? → A: 06:00–20:00 Uruguay local; call it the “franja horaria de análisis”, not actual daylight hours.
+- Q: What non-overlapping wind-speed bands (sustained, km/h) should map to suave / moderado / fuerte / muy fuerte? → A: 0 ≤ v < 10 / 10 ≤ v < 20 / 20 ≤ v < 35 / v ≥ 35 km/h.
+- Q: What initial provisional rule should convert model significant wave height into estimated surfable size? → A: surfable ≈ 0.5 × Hs; configurable and visible in results, documented as provisional and replaceable/calibratable, not a validated physical conversion.
+- Q: Is offshore/terral wind required for surfability or good conditions? → A: No. Wind direction and intensity are relevant quality indicators, but neither terral wind nor any single wind direction is a prerequisite for surfability or by itself decisive for overall quality.
+- Q: How should size bands be expressed? → A: With non-overlapping intervals and explicit inclusive/exclusive boundaries.
+
 ## User Scenarios & Testing *(mandatory)*
 
 La condición de surf usa una escala única (también en observaciones): **Sin olas surfeables** (< 0,5 m estimado), **Olas pequeñas pero surfeables**, **Razonable**, **Buena**, **Muy buena**, más **Incierto** (confianza baja) y **Pronóstico incompleto** (faltan datos). El sistema informa; no recomienda ni desaconseja surfear ni viajar.
+
+**Mapeo provisional tamaño → grado techo** (ola real estimada; bandas documentadas y reemplazables):
+
+| Tamaño estimado | Grado techo |
+|-----------------|-------------|
+| 0 ≤ h < 0,5 m | Sin olas surfeables (el viento/período/dirección no convierten este resultado en surfeable) |
+| 0,5 ≤ h < 0,8 m | Olas pequeñas pero surfeables |
+| 0,8 ≤ h < 1,2 m | Razonable |
+| 1,2 ≤ h < 1,8 m | Buena |
+| h ≥ 1,8 m | Muy buena |
+
+**Regla de calidad**: el tamaño fija el techo; viento (dirección e intensidad), período y dirección del swell son indicadores de calidad, no requisitos para que una ola sea surfeable. No se exige viento terral. Factores desfavorables respecto del perfil PUEDEN bajar el grado **como máximo un escalón**, considerando el conjunto de factores y sin dar por determinante a uno solo. Nunca suben el grado por encima del techo que marca el tamaño. Factores favorables dentro del techo no lo elevan. La regla y sus parámetros deben poder configurarse.
 
 ### User Story 1 - Condiciones hoy y próximos días (Priority: P1) — First delivery
 
@@ -63,7 +87,7 @@ Como surfista, quiero saber cómo evolucionan las condiciones de cada pico a lo 
 1. **Given** un pico y un día, **When** el usuario mira el detalle, **Then** ve las condiciones a las 06:00, 12:00 y 18:00 (tamaño, período, dirección del swell y si es favorable para ese pico, viento y si es favorable) y la mejor ventana de al menos 2 horas.
 2. **Given** que el viento empeora por la tarde sin que cambie el tamaño, **Then** la mejor franja es la mañana y se explica por qué.
 3. **Given** que el tamaño aumenta pero el viento empeora, **Then** no se interpreta como una mejora de la calidad.
-4. **Given** un día a partir de pasado mañana, **Then** se indica la franja del día más favorable (mañana, mediodía o tarde) sin prometer una hora precisa.
+4. **Given** un día a partir de pasado mañana, **Then** se indica la franja horaria de análisis más favorable (mañana, mediodía o tarde) sin prometer una hora precisa.
 
 ---
 
@@ -159,7 +183,7 @@ Como usuario, quiero comparar el pronóstico del sistema con el de otro sitio ur
 
 ### User Story 8 - Cambios desde la última consulta (Priority: P3) — Later stage
 
-Como usuario que consulta cada tanto, quiero ver rápido qué cambió.
+Como usuario, quiero ver rápido qué cambió.
 
 **Why this priority**: comodidad; no afecta el contenido del pronóstico.
 
@@ -191,7 +215,7 @@ Como usuario, quiero poder agregar más adelante picos de otras zonas (p. ej. La
 - Una fuente falla o tarda demasiado: la consulta continúa con las demás; se indica el estado de cada fuente. Con una sola fuente disponible, la confianza no supera media.
 - Fallan todas las fuentes: si hay datos guardados recientes, se usan con antigüedad informada; si no, se dice con claridad y no se genera pronóstico.
 - Sin conexión: solo puede mostrar la última consulta guardada, identificada como tal.
-- Consultas repetidas en poco tiempo: se reutilizan datos recientes salvo que el usuario pida actualizar.
+- Consultas repetidas en poco tiempo: se reutilizan datos descargados hace menos de 3 horas salvo que el usuario pida actualizar; datos ≥ 3 h se consideran no reutilizables como frescos (nueva descarga o modo solo-guardado con antigüedad informada).
 - Modelos en desacuerdo: se muestran por separado y baja la confianza; no se ocultan con un promedio.
 - Modelos no independientes (mismo origen/servicio): no cuentan como confirmación mutua.
 - Mar de viento vs marejada de fondo: no se confunden.
@@ -199,7 +223,7 @@ Como usuario, quiero poder agregar más adelante picos de otras zonas (p. ej. La
 - Viento que rota: se evalúa por franja; no se usa un valor medio del día.
 - Tamaño crece pero viento empeora: no es mejora de calidad.
 - Swell llega a la zona pero un pico no lo recibe: no se asume respuesta uniforme de la costa.
-- Altura de modelo ≠ altura percibida: el mínimo 0,5 m es sobre ola real; la conversión es estimación ajustable.
+- Altura de modelo ≠ altura percibida: el mínimo 0,5 m es sobre ola real; la estimación inicial usa **tamaño surfeable ≈ k × Hs**, con k = 0,5 configurable, visible en los resultados y no validado como conversión física de rompiente.
 - Menos de 2 horas válidas en un día: ese día no tiene ventana y no se clasifica como Sin olas surfeables.
 - Datos que no distinguen picos o ubicación sobre tierra: se detecta, se informa; no se presentan diferencias no respaldadas.
 - Fuente deja de ser gratuita o cambia condiciones: se sigue con las demás; nunca se activa un costo.
@@ -215,7 +239,7 @@ Como usuario, quiero poder agregar más adelante picos de otras zonas (p. ej. La
 
 - **FR-001**: El sistema DEBE funcionar a demanda: al recibir la orden del usuario, obtener datos, procesarlos y entregar el pronóstico sin depender de procesos previos ni permanentes.
 - **FR-002**: El sistema DEBE entregar el resultado en una interfaz de terminal (texto) simple: resumen inmediato y detalle por pico/franja a pedido, sin requerir navegador ni aplicación gráfica. *(First delivery)*
-- **FR-003**: El sistema DEBE reutilizar datos recientes para no repetir descargas innecesarias, y permitir forzar actualización o trabajar solo con lo guardado.
+- **FR-003**: El sistema DEBE reutilizar datos descargados hace menos de 3 horas para no repetir descargas innecesarias; DEBE permitir forzar actualización o trabajar solo con lo guardado (informando antigüedad). Pasadas las 3 horas, una consulta normal DEBE intentar obtener datos nuevos.
 
 #### Fuentes y datos
 
@@ -231,18 +255,18 @@ Como usuario, quiero poder agregar más adelante picos de otras zonas (p. ej. La
 
 - **FR-011**: El sistema DEBE mantener un perfil por pico, editable por el usuario sin modificar el sistema: ubicación, orientación, direcciones de swell ideales (y si se conocen aceptables/bloqueadas), vientos terrales, abrigo por dirección, período ideal y tipo de fondo.
 - **FR-012**: El sistema DEBE derivar el estado del perfil (incompleto, provisional o calibrado) de su contenido y de la decisión del usuario, y comportarse según ese estado (US3).
-- **FR-013**: El sistema NO DEBE estimar ni inventar campos esenciales del perfil (orientación, swell ideales, período ideal, vientos terrales). Campos opcionales faltantes PUEDEN estimarse con regla documentada, marcarse como estimados y ser corregibles; si no hay base, quedan desconocidos. Una estimación no habilita un perfil incompleto.
+- **FR-013**: El sistema NO DEBE estimar ni inventar campos esenciales del perfil (ubicación válida, orientación, swell ideales y período ideal). Los vientos terrales conocidos son información útil para evaluar la calidad, pero no son un requisito para determinar si puede haber olas surfeables ni deben ser un factor decisivo por sí solos. Campos opcionales faltantes PUEDEN estimarse con regla documentada, marcarse como estimados y ser corregibles; si no hay base, quedan desconocidos. Una estimación no habilita un perfil incompleto.
 - **FR-014**: El sistema DEBE informar cuando varios picos reciben los mismos datos de origen (diferencias solo por perfiles).
 - **FR-015**: El sistema DEBE permitir agregar picos o zonas nuevas aportando solo sus perfiles.
 
 #### Evaluación y condición de surf
 
-- **FR-016**: El sistema DEBE evaluar para cada pico y franja la compatibilidad entre oleaje, viento y perfil. En la primera entrega DEBE usar una regla inicial sencilla, explícita, documentada y provisional para estimar tamaño surfeable; no presentarla como conversión física validada ni predicción de altura de rompiente; debe poder reemplazarse/calibrarse; variaciones respecto de ideales no descartan automáticamente olas surfeables.
-- **FR-017**: El sistema DEBE clasificar el viento respecto de cada pico como terral, terral de costado, de costado, maral de costado o maral, según orientación y abrigo, con intensidad (suave, moderado, fuerte, muy fuerte), y describir la rotación diaria.
+- **FR-016**: El sistema DEBE evaluar para cada pico y franja la compatibilidad entre oleaje, viento y perfil. En la primera entrega DEBE usar una regla inicial provisional y configurable **tamaño surfeable estimado ≈ k × Hs**, con valor inicial **k = 0,5** (Hs = altura significativa del modelo). El valor vigente de k y el tamaño calculado DEBEN mostrarse en los resultados. La regla DEBE estar documentada y poder reemplazarse o calibrarse por pico/criterio; NO debe presentarse como conversión física validada ni predicción de altura de rompiente. Variaciones respecto de las condiciones ideales no descartan automáticamente olas surfeables.
+- **FR-017**: El sistema DEBE clasificar el viento respecto de cada pico como terral, terral de costado, de costado, maral de costado o maral, según orientación y abrigo, con intensidad según velocidad sostenida en km/h: **suave** 0 ≤ v < 10, **moderado** 10 ≤ v < 20, **fuerte** 20 ≤ v < 35, **muy fuerte** v ≥ 35. Los intervalos no se solapan, las bandas son documentadas y reemplazables, y el sistema DEBE describir la rotación diaria. La clasificación del viento es un indicador de calidad, no un requisito para la existencia de olas surfeables ni un factor único que determine la calidad global; NO se debe exigir viento terral.
 - **FR-018**: El sistema DEBE distinguir mar de viento local de marejada lejana cuando los datos lo permitan; informar si el swell crece, está en pico o baja cuando haya respaldo; estimar tamaño surfeable distinto de la altura bruta del modelo (FR-016); si no hay respaldo para el umbral 0,5 m, mostrar rango/incertidumbre o Incierto; NO interpretar altura significativa como altura de olas que rompen.
-- **FR-019**: El sistema DEBE clasificar cada franja y cada día de cada pico en la escala común o en Incierto / Pronóstico incompleto. Sin olas surfeables = tamaño estimado < 0,5 m.
-- **FR-020**: El sistema DEBE basar la condición del día de un pico en su mejor ventana contigua de al menos 2 horas dentro de horas de luz, no en el promedio del día.
-- **FR-021**: El sistema DEBE informar si el tamaño surfeable estimado podría alcanzar 0,5 m (ola real). Viento/período/dirección gradúan calidad pero no descartan existencia. Sin respaldo: Incierto o rango. NO recomendar ni desaconsejar surfear o viajar.
+- **FR-019**: El sistema DEBE clasificar cada franja y cada día de cada pico en la escala común o en Incierto / Pronóstico incompleto. Sin olas surfeables = tamaño estimado < 0,5 m. Por encima del umbral, DEBE aplicar bandas de tamaño documentadas y sin solapamiento como techo del grado: 0,5 ≤ h < 0,8 m; 0,8 ≤ h < 1,2 m; 1,2 ≤ h < 1,8 m; h ≥ 1,8 m. Si viento (dirección/intensidad), período o dirección del swell son desfavorables respecto del perfil, PUEDEN bajar el grado como máximo un escalón, considerando el conjunto de factores y sin que uno solo sea determinante; NUNCA subir por encima del techo del tamaño.
+- **FR-020**: El sistema DEBE basar la condición del día de un pico en su mejor ventana contigua de al menos 2 horas dentro de la **franja horaria de análisis 06:00–20:00 hora local de Uruguay** (banda fija; no usa tablas de orto/ocaso y no representa necesariamente las horas reales de luz), no en el promedio del día. Para el día actual, la ventana solo puede usar horas restantes dentro de esa banda (véase FR-024).
+- **FR-021**: El sistema DEBE informar si el tamaño surfeable estimado podría alcanzar 0,5 m (ola real). Viento (incluyendo si es terral o maral), período y dirección del swell gradúan la calidad, pero no son requisitos de surfabilidad ni descartan por sí solos la existencia de olas. La dirección del viento no debe tener un peso desproporcionado ni ser determinante por sí sola. Sin respaldo suficiente: Incierto o rango. NO recomendar ni desaconsejar surfear o viajar.
 - **FR-022**: El sistema DEBE mostrar solo lo necesario: no incluye energía del oleaje, temperatura del agua ni traje sugerido.
 - **FR-023**: El sistema DEBE ajustar precisión al horizonte: hoy y mañana — 06:00/12:00/18:00 y ventana ≥ 2 h; pasado mañana a día 4 — condición del día y franja favorable sin hora precisa; días 5–10 — solo tendencia (US5).
 - **FR-024**: Para el día actual, DEBE considerar solo horas restantes e indicar hora de consulta.
@@ -251,7 +275,7 @@ Como usuario, quiero poder agregar más adelante picos de otras zonas (p. ej. La
 
 #### Incertidumbre y confianza
 
-- **FR-027**: En primera entrega, confianza alta/media/baja por reglas documentadas (disponibilidad, antigüedad, completitud, estado del perfil). Ausencia de dato necesario NO es señal favorable.
+- **FR-027**: En primera entrega, confianza alta/media/baja por reglas documentadas (disponibilidad, antigüedad, completitud, estado del perfil). Datos reutilizados con antigüedad ≥ 3 h (modo solo-guardado u originados tras fallo de descarga) DEBEN tratarse como antiguos a efectos de confianza. Ausencia de dato necesario NO es señal favorable.
 - **FR-028**: Confianza limitada a media con una sola fuente/modelo útil o pico provisional; baja si datos incompletos, antiguos o insuficientes.
 - **FR-029**: NO presentar puntajes ni confianza como probabilidades hasta contrastarlos con observaciones.
 - **FR-030**: En segunda etapa, mostrar valores por modelo, desacuerdo y rango. En primera entrega, si hay desacuerdo evidente, no ocultarlo y reducir confianza.
@@ -303,13 +327,13 @@ Como usuario, quiero poder agregar más adelante picos de otras zonas (p. ej. La
 
 - **Pico**: lugar de surf evaluado individualmente (nombre, zona, ubicación, perfil asociado).
 - **Perfil del pico**: cómo funciona el pico (orientación; swell ideales/aceptables/bloqueadas; vientos terrales; abrigo por dirección; períodos útiles; fondo; estado incompleto/provisional/calibrado).
-- **Criterio de interpretación**: reglas/fórmulas versionadas reemplazables (tolerancias, relación altura modelo↔ola, clasificación de viento, escala de condición, versión y fecha).
-- **Criterio de surfeable**: tamaño mínimo 0,5 m sobre ola real; viento/período/dirección solo gradúan calidad.
+- **Criterio de interpretación**: reglas/fórmulas versionadas y configurables (tolerancias, bandas de tamaño→grado techo sin solapamiento, regla de bajada máxima de un escalón por calidad, relación inicial configurable altura modelo↔tamaño surfeable **k × Hs** con k = 0,5, clasificación de viento, escala de condición, versión y fecha).
+- **Criterio de surfeable**: tamaño mínimo estimado de 0,5 m sobre ola real (usando inicialmente k × Hs, con k = 0,5 configurable y visible); viento/período/dirección del swell son indicadores de calidad, no requisitos de surfabilidad; los factores desfavorables pueden bajar el grado techo como máximo un escalón, sin que un solo factor sea determinante, y nunca elevarlo.
 - **Fuente de datos**: origen externo (proveedor, modelo, condiciones de uso, costo, estado disponible/degradada/caída).
 - **Pronóstico regional**: lo que una fuente/modelo dice hora a hora (oleaje total y por componente, viento/ráfagas; emisión, descarga, validez).
 - **Consulta**: una ejecución a demanda (fuentes y estado, versión de criterio, horizonte, incidencias, antigüedad).
 - **Condición de un pico en una franja**: tamaño estimado, período, dirección y favorabilidad, viento (clase/intensidad/favorabilidad), condición en escala, valores por modelo.
-- **Ventana**: mejor tramo continuo ≥ 2 h (inicio, fin, condición).
+- **Ventana**: mejor tramo continuo ≥ 2 h dentro de la franja horaria de análisis 06:00–20:00 hora local de Uruguay (inicio, fin, condición); no equivale necesariamente a las horas reales de luz.
 - **Resumen del día**: titular, rango de tamaño, swell dominante, viento y rotación, condición por pico, mejor pico/franja, confianza, motivo/análisis.
 - **Tendencia a mediano plazo**: días 5–10 (tamaño/período/dirección esperados, llegada, confianza).
 - **Confianza**: nivel alta/media/baja, componentes, motivo de límites.
@@ -342,10 +366,10 @@ Como usuario, quiero poder agregar más adelante picos de otras zonas (p. ej. La
 ## Assumptions
 
 - Un único usuario, uso personal; terminal de texto y conexión a internet al consultar (salvo modo solo-guardado).
-- El usuario aporta perfiles. Esenciales: orientación, swell ideales, período ideal, vientos terrales. Opcionales (estimables si hay base): aceptables/bloqueadas, período mínimo, abrigo, fondo.
+- El usuario aporta perfiles. Esenciales para interpretar el pico: ubicación válida, orientación, swell ideales y período ideal. Los vientos terrales conocidos son un atributo útil del perfil para evaluar calidad, pero no son una condición obligatoria para declarar olas surfeables ni para considerar buenas las condiciones. Opcionales (estimables si hay base): direcciones aceptables/bloqueadas, período mínimo, abrigo y fondo.
 - Perfiles actuales describen ideales generales; variaciones razonables también pueden producir ≥ 0,5 m y deben estimarse e informarse como tales.
 - Datos de oleaje/viento de modelos globales de resolución gruesa; no hay boyas direccionales confiables cercanas ni verdad de terreno automática.
-- Altura de modelo ≠ altura percibida; la relación es estimación inicial ajustable con observaciones.
+- Altura de modelo ≠ altura percibida; relación inicial provisional y configurable **tamaño surfeable estimado ≈ k × Hs**, con k = 0,5 al inicio. El valor vigente de k y el resultado se muestran al usuario; la relación no es una conversión física validada y podrá revisarse con observaciones.
 - Un sitio uruguayo de referencia sirve de modelo de *formato* y de comparación futura; **no** es fuente de datos del sistema.
 - Fuentes concretas se eligen en el plan; gratuitas y de uso personal. Varios modelos del mismo servicio ≠ independencia.
 - Tendencia 5–10 se limita al swell ya en camino; ciclones aún no formados fuera de la primera versión de esa etapa.
@@ -372,7 +396,7 @@ Los cinco picos están en un tramo de pocos kilómetros, menor que la resolució
 - **On-demand**: Sin servidores permanentes, alertas autónomas ni procesos en segundo plano.
 - **Honesty**: Confianza e Incierto/Incompleto visibles; no probabilidades sin calibración; desacuerdos no ocultos con promedios.
 - **Inform, don't decide**: Informa condiciones y confianza; la decisión de surfear/viajar es del usuario.
-- **Data integrity**: Distinguir medido / pronosticado / inferido / empírico; altura modelo ≠ rompiente; no inventar campos esenciales del perfil.
+- **Data integrity**: Distinguir medido / pronosticado / inferido / empírico; altura modelo ≠ rompiente; no inventar campos esenciales del perfil; la conversión inicial de tamaño es configurable, visible y provisional.
 - **Traceability**: Toda condición trazable a datos, fuentes, reglas, perfil y versión de criterio.
 - **Simplicity first**: Primera entrega = camino más simple (US1–US3 + terminal); etapas posteriores solo con necesidad concreta.
 - **Out of scope by default**: Sin cuentas, pagos, telemetría ni multiusuario.
