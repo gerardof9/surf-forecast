@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Pronóstico personalizado de surf para La Paloma
+# Specification Quality Checklist: Personalized surf forecast for La Paloma
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-10-13
@@ -32,7 +32,10 @@
 ## Notes
 
 - Validation iteration 1 (2026-10-13): All items pass.
-- First delivery scope explicitly limited to US1–US3 (+ basic confidence / source failure handling / terminal). US4–US9 documented as later stages without expanding MVP.
+- First delivery scope explicitly limited to US1–US3 plus basic confidence, source-failure handling, terminal output, and immutable query snapshots required for traceability/reproducibility. Observation entry and US4–US9 remain later stages.
 - "Terminal" is a user-facing delivery constraint (form of use), not a tech-stack choice.
 - Concrete free data sources intentionally deferred to `/speckit-plan` (stated in Assumptions).
 - No blocking clarifications per author input.
+- Spec and constitution translated to English (2026-10-13); FR-043 still requires Spanish UI text at runtime.
+- Validation iteration 2 (2026-10-13): resolved immutable MVP history, the surfable-grade floor, post-20:00 behavior, threshold-crossing uncertainty, stage ordering, and the hourly-data requirement for 2-hour windows.
+- Validation iteration 3 (2026-10-14): defined the two-factor quality downgrade, swell-trend method, user-marked calibrated profiles, day headlines/best peaks, shared-grid notice on the main result, FR-045 as later-stage, and matching first-delivery tasks.

@@ -1,4 +1,4 @@
-# Feature Specification: Pronóstico personalizado de surf para La Paloma
+# Feature Specification: Personalized surf forecast for La Paloma
 
 **Feature Branch**: `001-la-paloma-surf-forecast`
 
@@ -6,397 +6,431 @@
 
 **Status**: Draft
 
-**Input**: User description: "Herramienta personal, de uso a demanda, que reúne datos gratuitos de oleaje y viento para estimar, pico por pico, si habrá olas surfeables hoy y en los próximos 4 días en La Paloma, con confianza, perfiles locales y evolución por etapas."
+**Input**: User description: "Personal, on-demand tool that gathers free swell and wind data to estimate, peak by peak, whether there will be surfable waves today and over the next 4 days in La Paloma, with confidence, local profiles, and staged evolution."
 
 ## Scope Summary
 
-**Primary question**: ¿Habrá olas en cada pico de La Paloma hoy y en los próximos 4 días?
+**Primary question**: Will there be waves at each La Paloma peak today and over the next 4 days?
 
-**Secondary**: ¿Con qué calidad, en qué horas y con cuánta confianza?
+**Secondary**: With what quality, at what hours, and with how much confidence?
 
-**Medium-term (later stage)**: ¿Qué swell muestran ya los modelos en camino para los días siguientes?
+**Medium-term (later stage)**: What swell do the models already show en route for the following days?
 
-**Surfeable definition**: tamaño estimado ≥ 0,5 m (ola real, no altura bruta del modelo). Viento, período y dirección gradúan la calidad; no descartan por sí solos la existencia de olas.
+**Surfable definition**: estimated size ≥ 0.5 m (real wave face, not raw model height). Wind, period, and direction grade quality; they do not by themselves rule out the existence of waves.
 
-**First delivery (MVP)**: US1, US2 y US3 — pronóstico operativo básico para hoy + 4 días (5 días), cinco picos, confianza básica, degradación ante fallos de fuentes, interfaz de terminal. Análisis narrativo elaborado, tendencia a mediano plazo, observaciones/ajustes y evaluación de desempeño pertenecen a etapas posteriores y **no amplían** el alcance de la primera entrega.
+**First delivery (MVP)**: US1, US2, and US3 — basic operational forecast for today + 4 days (5 days total), five peaks, basic confidence, graceful source-failure handling, terminal interface, and immutable local snapshots of every emitted query. Observation entry, discrepancy analysis, criteria adjustments, elaborated narrative analysis, medium-term outlook, and performance evaluation belong to later stages and **do not expand** first-delivery scope.
 
 **Delivery stages (order)**:
-1. Primera: US1–US3 (operativo + perfiles + confianza básica)
-2. Segunda: US4 (análisis / comparación de modelos) + US5 (tendencia 5–10 días)
-3. Tercera: US6 (observaciones y corrección controlada del criterio)
-4. Última: US7–US9 (comparación con referencia, cambios entre consultas, otras zonas)
+1. First: US1–US3 (operational + profiles + basic confidence) and immutable query snapshots
+2. Second: US6 validation foundation (record observations, compare them with snapshots, expose discrepancies, and support manual versioned reversible criteria adjustments)
+3. Third: US4 (analysis / model comparison) + US5 (days 5–10 outlook)
+4. Fourth: US6 advanced correction (evidence-based adjustment proposals and bounded automatic application with historical impact checks)
+5. Last: US7–US9 (reference comparison, changes between queries, other zones)
 
-**Out of scope (first delivery and until expressly added)**: otras zonas (p. ej. La Pedrera), uso comercial/multiusuario/cuentas/pagos, alertas o procesos autónomos, interfaces gráficas o web, marea, extracción automática de sitios de pronóstico, modelos propios de propagación/hidrodinámica costera, presentar probabilidad de acierto sin contrastar con observaciones.
+**Out of scope (first delivery and until expressly added)**: other zones (e.g. La Pedrera), commercial/multi-user/accounts/payments, alerts or autonomous processes, GUI or web interfaces, tide, automatic extraction from forecast websites, proprietary wave-propagation or coastal-hydrodynamics models, presenting hit probability without contrasting against observations.
 
 ## Clarifications
 
 ### Session 2026-10-13
 
-- Q: How should estimated size and quality factors map into the ordinal condition scale above “Sin olas surfeables”? → A: Size bands set the ceiling; unfavorable wind/period/direction may lower the grade by at most one step (Option B)
+- Q: How should estimated size and quality factors map into the ordinal condition scale above “No surfable waves”? → A: Size bands set the ceiling; unfavorable wind/period/direction may lower the grade by at most one step (Option B)
 - Q: How long may previously downloaded forecast data be reused before a new fetch is required (unless the user forces refresh)? → A: 3 hours (Option B)
-- Q: How should the fixed daily analysis window be defined (FR-020)? → A: 06:00–20:00 Uruguay local; call it the “franja horaria de análisis”, not actual daylight hours.
-- Q: What non-overlapping wind-speed bands (sustained, km/h) should map to suave / moderado / fuerte / muy fuerte? → A: 0 ≤ v < 10 / 10 ≤ v < 20 / 20 ≤ v < 35 / v ≥ 35 km/h.
+- Q: How should the fixed daily analysis window be defined (FR-020)? → A: 06:00–20:00 Uruguay local; call it the “analysis time window”, not actual daylight hours.
+- Q: What non-overlapping wind-speed bands (sustained, km/h) should map to light / moderate / strong / very strong? → A: 0 ≤ v < 10 / 10 ≤ v < 20 / 20 ≤ v < 35 / v ≥ 35 km/h.
 - Q: What initial provisional rule should convert model significant wave height into estimated surfable size? → A: surfable ≈ 0.5 × Hs; configurable and visible in results, documented as provisional and replaceable/calibratable, not a validated physical conversion.
-- Q: Is offshore/terral wind required for surfability or good conditions? → A: No. Wind direction and intensity are relevant quality indicators, but neither terral wind nor any single wind direction is a prerequisite for surfability or by itself decisive for overall quality.
+- Q: Is offshore/terral wind required for surfability or good conditions? → A: No. Wind direction and intensity are relevant quality indicators, but neither offshore wind nor any single wind direction is a prerequisite for surfability or by itself decisive for overall quality.
 - Q: How should size bands be expressed? → A: With non-overlapping intervals and explicit inclusive/exclusive boundaries.
+- Q: Can quality factors lower a size-qualified surfable result to “No surfable waves”? → A: No. When estimated size is at least 0.5 m, quality downgrades MUST stop at “Small but surfable.”
+- Q: What happens when a query is made after the 06:00–20:00 analysis window? → A: Today is shown as “Analysis window completed,” receives no condition or best window, and the fixed horizon remains today through day +4.
+- Q: What must be retained from the MVP onward? → A: Every emitted query is saved as an immutable local snapshot with the inputs, provenance, effective criteria/profile versions, outputs, confidence, and incidents needed for traceability and later comparison.
+- Q: How is uncertainty handled near the 0.5 m threshold? → A: A point estimate alone MUST NOT force a hard classification when the plausible range crosses 0.5 m; show the range and “Uncertain.” Phase 0 research defines the initial documented configurable uncertainty method.
+
+### Session 2026-10-14
+
+- Q: When is a quality factor “unfavorable,” and when does the one-step downgrade apply? → A: Classify swell direction, period, and wind each as favorable, neutral, unfavorable, or unknown using the versioned criteria below. Apply at most one downgrade only when **two or more** of those three factors are unfavorable. One unfavorable factor is shown as a reason and does not lower the grade. Unknown never counts as unfavorable. Size ≥ 0.5 m still cannot fall below Small but surfable.
+- Q: Does first delivery honor a user-marked calibrated profile? → A: Yes, when essential fields are complete. The system never promotes a profile to calibrated by itself. Incomplete essential fields keep the profile incomplete even if the file says calibrated. A calibrated profile does not lift the medium-confidence cap while only one model family is in use.
+- Q: Is swell building/peaking/dropping in the first delivery? → A: Yes, as a labeled derived trend from consecutive hourly swell or total-wave height when at least three analysis-window samples exist. Otherwise the trend is unsupported, never invented.
+- Q: Are alternative prediction methods (FR-045) in the first delivery? → A: No. First delivery has one versioned criteria set. Comparing another method is a later stage; until then, change criteria JSON and replay a snapshot.
 
 ## User Scenarios & Testing *(mandatory)*
 
-La condición de surf usa una escala única (también en observaciones): **Sin olas surfeables** (< 0,5 m estimado), **Olas pequeñas pero surfeables**, **Razonable**, **Buena**, **Muy buena**, más **Incierto** (confianza baja) y **Pronóstico incompleto** (faltan datos). El sistema informa; no recomienda ni desaconseja surfear ni viajar.
+Surf condition uses a single scale (also used in observations): **No surfable waves** (< 0.5 m estimated), **Small but surfable**, **Fair**, **Good**, **Very good**, plus **Uncertain** (low confidence) and **Incomplete forecast** (missing data). The system informs; it does not recommend or discourage surfing or traveling.
 
-**Mapeo provisional tamaño → grado techo** (ola real estimada; bandas documentadas y reemplazables):
+**Provisional size → ceiling-grade mapping** (estimated real wave; documented, replaceable bands):
 
-| Tamaño estimado | Grado techo |
-|-----------------|-------------|
-| 0 ≤ h < 0,5 m | Sin olas surfeables (el viento/período/dirección no convierten este resultado en surfeable) |
-| 0,5 ≤ h < 0,8 m | Olas pequeñas pero surfeables |
-| 0,8 ≤ h < 1,2 m | Razonable |
-| 1,2 ≤ h < 1,8 m | Buena |
-| h ≥ 1,8 m | Muy buena |
+| Estimated size | Ceiling grade |
+|----------------|---------------|
+| 0 ≤ h < 0.5 m | No surfable waves (wind/period/direction do not turn this into surfable) |
+| 0.5 ≤ h < 0.8 m | Small but surfable |
+| 0.8 ≤ h < 1.2 m | Fair |
+| 1.2 ≤ h < 1.8 m | Good |
+| h ≥ 1.8 m | Very good |
 
-**Regla de calidad**: el tamaño fija el techo; viento (dirección e intensidad), período y dirección del swell son indicadores de calidad, no requisitos para que una ola sea surfeable. No se exige viento terral. Factores desfavorables respecto del perfil PUEDEN bajar el grado **como máximo un escalón**, considerando el conjunto de factores y sin dar por determinante a uno solo. Nunca suben el grado por encima del techo que marca el tamaño. Factores favorables dentro del techo no lo elevan. La regla y sus parámetros deben poder configurarse.
+**Quality rule**: size sets the ceiling; wind (direction and intensity), period, and swell direction are quality indicators, not requirements for a wave to be surfable. Offshore (terral) wind is not required. Factors never raise the grade above the size ceiling. A size-qualified result of at least 0.5 m MUST NEVER be downgraded below **Small but surfable**.
 
-### User Story 1 - Condiciones hoy y próximos días (Priority: P1) — First delivery
+**Initial provisional factor classification** (versioned in criteria; replaceable):
 
-Como surfista de La Paloma, quiero ver para hoy y para los próximos 4 días qué condiciones habrá en cada pico, para saber cuándo y dónde habrá olas surfeables.
+| Factor | Favorable | Unfavorable | Neutral / unknown |
+|--------|-----------|-------------|-------------------|
+| Swell direction | Inside an ideal sector | Inside a blocked sector | Acceptable sector, or unclassified; missing direction is unknown |
+| Period | Inside the ideal period range | Below `minimum_period_s` when that field is set; otherwise below the ideal-range minimum | At or above the ideal minimum but outside the ideal range; missing period is unknown |
+| Wind | Offshore or offshore-side, and light or moderate | Onshore or onshore-side, and strong or very strong | All other classified combinations, including light onshore; missing speed or direction is unknown |
 
-**Why this priority**: razón de ser del sistema.
+**Downgrade trigger**: lower the size-ceiling grade by **at most one step** only when **two or more** classified factors are unfavorable. A single unfavorable factor is recorded and shown; it is not by itself decisive. Unknown factors are omitted from the count and MUST NOT be treated as favorable or unfavorable.
 
-**Independent Test**: con datos de ejemplo, una consulta produce el resumen de cada día.
+### User Story 1 - Conditions today and coming days (Priority: P1) — First delivery
+
+As a La Paloma surfer, I want to see for today and the next 4 days what conditions each peak will have, so I know when and where there will be surfable waves.
+
+**Why this priority**: reason the system exists.
+
+**Independent Test**: with sample data, one query produces each day's summary.
 
 **Acceptance Scenarios**:
 
-1. **Given** hay datos de al menos una fuente, **When** el usuario pide el pronóstico, **Then** recibe para hoy y cada uno de los siguientes 4 días un resumen con titular, rango de tamaño, swell dominante (período y dirección), viento (rango de velocidad, dirección y rotación durante el día), condición de surf y confianza.
-2. **Given** un día en que las condiciones difieren entre picos, **Then** el resumen muestra la condición de cada pico y destaca los mejores.
-3. **Given** un día sin datos suficientes de oleaje o de viento, **Then** se marca Pronóstico incompleto y nunca Sin olas surfeables.
-4. **Given** un día con confianza baja, **Then** la condición se presenta como Incierto y se explica brevemente la causa (datos incompletos, antiguos, una sola fuente/modelo útil o perfil provisional). La comparación detallada entre modelos pertenece a US4.
-5. **Given** el día actual, **Then** solo se consideran las horas que faltan y se indica la hora de la consulta.
+1. **Given** data from at least one source, **When** the user requests the forecast, **Then** they receive for today and each of the next 4 days a summary with headline, size range, dominant swell (period and direction), wind (speed range, direction, and rotation through the day), surf condition, and confidence.
+2. **Given** a day when conditions differ across peaks, **Then** the summary shows each peak's condition and highlights the best ones.
+3. **Given** a day without sufficient swell or wind data, **Then** it is marked Incomplete forecast and never No surfable waves.
+4. **Given** a day with low confidence, **Then** the condition is presented as Uncertain with a brief cause (incomplete/stale data, a single useful source/model, or provisional profile). Detailed model comparison belongs to US4.
+5. **Given** the current day, **Then** only remaining hours are considered and the query time is shown.
+6. **Given** a query at or after 20:00 Uruguay local time, **Then** today is shown as Analysis window completed, no condition or best window is emitted for today, and forecasts still cover tomorrow through day +4 without extending to day +5.
 
 ---
 
-### User Story 2 - Detalle por pico y franja (Priority: P1) — First delivery
+### User Story 2 - Detail by peak and time slot (Priority: P1) — First delivery
 
-Como surfista, quiero saber cómo evolucionan las condiciones de cada pico a lo largo del día y en qué momento estarán mejor.
+As a surfer, I want to know how each peak's conditions evolve through the day and when they will be best.
 
-**Why this priority**: la hora y el viento definen la calidad tanto como el tamaño.
+**Why this priority**: time of day and wind define quality as much as size.
 
-**Independent Test**: para un pico y un día de ejemplo se obtiene el desglose por franjas.
+**Independent Test**: for a sample peak and day, the time-slot breakdown is obtained.
 
 **Acceptance Scenarios**:
 
-1. **Given** un pico y un día, **When** el usuario mira el detalle, **Then** ve las condiciones a las 06:00, 12:00 y 18:00 (tamaño, período, dirección del swell y si es favorable para ese pico, viento y si es favorable) y la mejor ventana de al menos 2 horas.
-2. **Given** que el viento empeora por la tarde sin que cambie el tamaño, **Then** la mejor franja es la mañana y se explica por qué.
-3. **Given** que el tamaño aumenta pero el viento empeora, **Then** no se interpreta como una mejora de la calidad.
-4. **Given** un día a partir de pasado mañana, **Then** se indica la franja horaria de análisis más favorable (mañana, mediodía o tarde) sin prometer una hora precisa.
+1. **Given** a peak and a day, **When** the user views detail, **Then** they see conditions at 06:00, 12:00, and 18:00 (size, period, swell direction and whether favorable for that peak, wind and whether favorable) and the best window of at least 2 hours.
+2. **Given** wind worsens in the afternoon without size changing, **Then** the best slot is morning and the reason is explained.
+3. **Given** size increases but wind worsens, **Then** it is not interpreted as a quality improvement.
+4. **Given** a day from the day after tomorrow onward, **Then** the most favorable analysis time window (morning, midday, or afternoon) is indicated without promising an exact hour.
 
 ---
 
-### User Story 3 - Perfil de cada pico (Priority: P1) — First delivery
+### User Story 3 - Profile for each peak (Priority: P1) — First delivery
 
-Como conocedor de la zona, quiero describir cómo funciona cada pico (direcciones de swell, vientos limpios, abrigo, períodos, fondo) para que el sistema distinga entre picos cercanos.
+As someone who knows the area, I want to describe how each peak works (swell directions, clean winds, shelter, periods, bottom) so the system can distinguish nearby peaks.
 
-**Why this priority**: los modelos regionales no distinguen picos; el perfil es lo que los diferencia.
+**Why this priority**: regional models do not distinguish peaks; the profile is what differentiates them.
 
-**Independent Test**: con perfiles completos e incompletos de ejemplo, cada pico recibe su estado correcto.
+**Independent Test**: with complete, incomplete, incoherent, and user-marked calibrated sample profiles, each peak gets the correct status.
 
 **Acceptance Scenarios**:
 
-1. **Given** un pico con todos los datos esenciales y sin contraste con observaciones, **Then** se evalúa como provisional, se muestra marcado y su confianza no supera media.
-2. **Given** un pico al que le faltan datos esenciales, **Then** es incompleto: no recibe condición, se lista aparte con lo que le falta y con los datos regionales disponibles. Los campos opcionales estimados no lo habilitan.
-3. **Given** un pico que el usuario marcó como calibrado tras comparar con observaciones, **Then** se evalúa como calibrado.
-4. **Given** un perfil con valores incoherentes, **Then** el sistema lo detecta y lo informa antes de evaluar.
-5. **Given** un swell, período o viento que difieren de los ideales del perfil, **Then** el sistema estima con una regla inicial documentada y provisional si aun así podrían llegar olas ≥ 0,5 m; indica que es estimación, expresa incertidumbre; no descarta solo por no ser ideal ni presenta la estimación como medición o conversión física validada.
+1. **Given** a peak with all essential fields and no observation contrast, **Then** it is evaluated as provisional, shown as such, and its confidence does not exceed medium.
+2. **Given** a peak missing essential fields, **Then** it is incomplete: it receives no condition, is listed separately with what is missing and available regional data. Estimated optional fields do not enable it.
+3. **Given** a peak the user marked calibrated after comparing with observations, **Then** it is evaluated as calibrated.
+4. **Given** a profile with incoherent values, **Then** the system detects and reports it before evaluating.
+5. **Given** swell, period, or wind differing from the profile ideals, **Then** the system estimates with a documented provisional initial rule whether ≥ 0.5 m waves could still arrive; it labels the estimate, expresses uncertainty; it does not discard solely for non-ideal, nor present the estimate as a measurement or validated physical conversion.
 
 ---
 
-### User Story 4 - Entender por qué (Priority: P2) — Second stage
+### User Story 4 - Understand why (Priority: P2) — Third stage
 
-Como usuario que no quiere confiar a ciegas, quiero ver qué datos y reglas llevaron a cada condición y leer un análisis breve.
+As a user who does not want to trust blindly, I want to see which data and rules led to each condition and read a brief analysis.
 
-**Why this priority**: da confianza y permite detectar errores; la condición ya sirve sin esto.
+**Why this priority**: builds trust and helps spot errors; the condition already works without this.
 
-**Independent Test**: para una condición cualquiera se puede reconstruir el razonamiento.
+**Independent Test**: for any condition, the reasoning can be reconstructed.
 
 **Acceptance Scenarios**:
 
-1. **Given** cualquier condición, **When** se consulta el detalle de razonamiento (etapa US4), **Then** el usuario ve valores de oleaje y viento usados, fuente y modelo, factores favorables/perjudiciales y un análisis breve en lenguaje natural marcado como generado automáticamente. En la primera entrega basta con datos básicos, condición, confianza y motivo breve basado en reglas sencillas.
-2. **Given** que dos o más modelos difieren, **Then** (US4) se muestran por separado con su desacuerdo, no solo un promedio.
-3. **Given** que el resultado depende de un pico provisional, **Then** eso se indica junto a la condición.
-4. **Given** que se usaron datos guardados de una consulta anterior, **Then** se informa su antigüedad.
+1. **Given** any condition, **When** the user opens reasoning detail (US4 stage), **Then** they see swell and wind values used, source and model, favorable/unfavorable factors, and a brief natural-language analysis marked as automatically generated. First delivery only needs basic data, condition, confidence, and a short rule-based reason.
+2. **Given** two or more models differ, **Then** (US4) they are shown separately with disagreement, not only an average.
+3. **Given** the result depends on a provisional peak, **Then** that is indicated with the condition.
+4. **Given** stored data from a prior query were used, **Then** their age is reported.
 
 ---
 
-### User Story 5 - Tendencia a mediano plazo (Priority: P2) — Second stage
+### User Story 5 - Medium-term outlook (Priority: P2) — Third stage
 
-Como usuario, quiero una estimación de lo que viene más adelante, basada en el swell que los modelos ya muestran en camino.
+As a user, I want an estimate of what is coming later, based on swell the models already show en route.
 
-**Why this priority**: amplía el horizonte con menos fiabilidad que el plazo corto.
+**Why this priority**: extends the horizon with less reliability than the short range.
 
-**Independent Test**: una consulta muestra la tendencia separada del pronóstico operativo.
+**Independent Test**: a query shows the outlook separately from the operational forecast.
 
 **Acceptance Scenarios**:
 
-1. **Given** que las fuentes cubren ese plazo, **When** se consulta, **Then** se muestra por día una tendencia regional de oleaje y viento, claramente distinta del pronóstico operativo.
-2. **Given** un swell que los modelos ya muestran en camino, **Then** se informa llegada estimada e incertidumbre, sin afirmar olas surfeables en un pico.
-3. **Given** un día de ese plazo, **Then** no se emite condición por pico ni por hora.
-4. **Given** que la señal cambia entre consultas o entre modelos, **Then** se indica confianza baja.
+1. **Given** sources cover that range, **When** queried, **Then** a regional daily swell/wind outlook is shown, clearly distinct from the operational forecast.
+2. **Given** swell already shown en route by models, **Then** estimated arrival and uncertainty are reported, without asserting surfable waves at a peak.
+3. **Given** a day in that range, **Then** no per-peak or per-hour condition is emitted.
+4. **Given** the signal changes between queries or models, **Then** confidence is marked low.
 
 ---
 
-### User Story 6 - Observaciones y corrección del criterio (Priority: P2) — Third stage
+### User Story 6 - Observations and criteria correction (Priority: P2) — Second and fourth stages
 
-Como usuario, quiero anotar lo que encontré en el agua (o lo que dicen otros pronósticos) y que el sistema revise su criterio cuando se equivoca.
+As a user, I want to record what I found in the water (or what other forecasts say) and have the system review its criteria when it is wrong.
 
-**Why this priority**: permite pasar de reglas provisionales a reglas validadas.
+**Why this priority**: moves from provisional rules to validated rules.
 
-**Independent Test**: con un caso de ejemplo en que el sistema se equivoca, se obtiene una propuesta de ajuste.
+**Independent Test**: in the second stage, a sample observation is compared with an immutable query snapshot and produces a discrepancy available for review. In the fourth stage, a supported sample error produces an adjustment proposal and, only when evidence is sufficient, a bounded automatic adjustment.
 
 **Acceptance Scenarios**:
 
-1. **Given** que el usuario registra una observación (fecha, hora, pico, condición en la escala común, tamaño, viento, tipo subjetiva/instrumental), **Then** queda guardada y no se mezcla con otro tipo.
-2. **Given** que el usuario avisa inconsistencia con lo que ve en el pico, **Then** el sistema registra la discrepancia, conserva intacto el pronóstico original e identifica criterios involucrados; solo con regla justificable y evidencia suficiente aplica ajuste automático acotado y reversible sin confirmación adicional.
-3. **Given** que se aplicó un ajuste, **Then** recalcula el pronóstico vigente, muestra el resultado nuevo e indica qué cambió; la observación no sustituye el pronóstico histórico; si el nuevo resultado no concuerda con la observación, lo informa.
-4. **Given** que el error es de las fuentes o la causa no se identifica con respaldo, **Then** registra la discrepancia, no modifica el criterio por error de fuente, y si la causa es incierta propone ajuste para revisión.
-5. **Given** que un ajuste empeoraría casos pasados de forma apreciable, **Then** solo se aplica si mejora el caso nuevo y deja constancia del conflicto.
-6. **Given** que se aplicó un ajuste, **Then** queda registrado con fecha y motivo, es reversible, y las consultas posteriores usan el criterio nuevo.
-7. **Given** un pronóstico de referencia cargado a mano que discrepa, **Then** se registra como evidencia pero no modifica el criterio por sí solo.
-8. **Given** un conjunto suficiente de observaciones, **When** el usuario pide evaluación, **Then** recibe informe de aciertos/errores por anticipación (mismo día, 1–4 días, tendencia 5–10) con falsos positivos y oportunidades no detectadas.
-9. **Given** días sin pronósticos guardados, **Then** el informe lo declara y solo usa histórico de fuentes si existe.
+1. **Given** the user records an observation (date, time, peak, condition on the common scale, size, wind, subjective/instrumental type), **Then** it is stored and not mixed with another type.
+2. **Given** the user reports inconsistency with what they see at the peak, **Then** the system records the discrepancy, keeps the original forecast intact, and identifies involved criteria; only with a justifiable rule and sufficient evidence does it apply an automatic bounded reversible adjustment without further confirmation.
+3. **Given** an adjustment was applied, **Then** it recalculates the current forecast, shows the new result and what changed; the observation does not replace the historical forecast; if the new result disagrees with the observation, it reports that.
+4. **Given** the error is from sources or the cause cannot be identified with support, **Then** it records the discrepancy, does not change criteria for source error, and if the cause is uncertain proposes an adjustment for review.
+5. **Given** an adjustment would appreciably worsen past recorded cases, **Then** it applies only if it improves the new case and records the conflict.
+6. **Given** an adjustment was applied, **Then** it is logged with date and reason, is reversible, and later queries use the new criteria.
+7. **Given** a manually loaded reference forecast that disagrees, **Then** it is recorded as evidence but does not by itself change criteria.
+8. **Given** a sufficient set of observations, **When** the user requests evaluation, **Then** they receive a hit/miss report by lead time (same day, 1–4 days, days 5–10 outlook) with false positives and missed opportunities.
+9. **Given** days without stored forecasts, **Then** the report states that and only uses source history if available.
+
+**Stage boundary**: the second stage implements observation capture, comparison with saved query snapshots, discrepancy visibility, and manual versioned reversible adjustments. Evidence-based proposals, automatic application, recalculation, and historical impact checks belong to the fourth stage.
 
 ---
 
-### User Story 7 - Comparar con referencia existente (Priority: P3) — Later stage
+### User Story 7 - Compare with existing reference (Priority: P3) — Later stage
 
-Como usuario, quiero comparar el pronóstico del sistema con el de otro sitio uruguayo y con lo observado, para saber si la herramienta es más precisa.
+As a user, I want to compare the system's forecast with another Uruguayan site and with what was observed, to know if the tool is more accurate.
 
-**Why this priority**: la precisión solo se demuestra con comparación; requiere observaciones acumuladas.
+**Why this priority**: accuracy is only proven by comparison; needs accumulated observations.
 
-**Independent Test**: con referencias y observaciones de ejemplo se obtiene la comparación.
+**Independent Test**: with sample references and observations, the comparison is obtained.
 
 **Acceptance Scenarios**:
 
-1. **Given** un pronóstico de referencia ingresado a mano, **Then** queda guardado separado del propio.
-2. **Given** conjunto suficiente de observaciones con propios y referencia, **Then** el informe compara ambos contra lo observado.
-3. **Given** cualquier uso, **Then** el sistema no extrae ni reproduce contenido del sitio de referencia: solo guarda lo que el usuario ingresa.
+1. **Given** a manually entered reference forecast, **Then** it is stored separately from the system's own.
+2. **Given** a sufficient set of observations with own and reference forecasts, **Then** the report compares both against what was observed.
+3. **Given** any use, **Then** the system does not scrape or reproduce reference-site content: it only stores what the user enters.
 
 ---
 
-### User Story 8 - Cambios desde la última consulta (Priority: P3) — Later stage
+### User Story 8 - Changes since last query (Priority: P3) — Later stage
 
-Como usuario, quiero ver rápido qué cambió.
+As a user who checks occasionally, I want to quickly see what changed.
 
-**Why this priority**: comodidad; no afecta el contenido del pronóstico.
+**Why this priority**: convenience; does not affect forecast content.
 
-**Independent Test**: dos consultas seguidas con datos distintos muestran la diferencia.
+**Independent Test**: two successive queries with different data show the difference.
 
 **Acceptance Scenarios**:
 
-1. **Given** consulta anterior con menos de 72 horas, **Then** se destacan cambios relevantes (condición, mejor pico, tamaño estimado).
-2. **Given** que no existe o es más antigua, **Then** se indica "sin comparación reciente".
+1. **Given** a prior query less than 72 hours old, **Then** relevant changes are highlighted (condition, best peak, estimated size).
+2. **Given** none exists or it is older, **Then** "no recent comparison" is indicated.
 
 ---
 
-### User Story 9 - Sumar otras zonas (Priority: P3) — Later stage
+### User Story 9 - Add other zones (Priority: P3) — Later stage
 
-Como usuario, quiero poder agregar más adelante picos de otras zonas (p. ej. La Pedrera).
+As a user, I want to later add peaks from other zones (e.g. La Pedrera).
 
-**Why this priority**: no se necesita en la primera versión, pero condiciona el diseño.
+**Why this priority**: not needed in v1, but shapes the design.
 
-**Independent Test**: se agrega un pico de prueba y aparece en la consulta.
+**Independent Test**: a test peak is added and appears in the query.
 
 **Acceptance Scenarios**:
 
-1. **Given** un nuevo pico con su perfil, **When** se agrega, **Then** aparece en las consultas sin modificar el funcionamiento del sistema.
+1. **Given** a new peak with its profile, **When** it is added, **Then** it appears in queries without changing how the system works.
 
 ---
 
 ### Edge Cases
 
-- Una fuente falla o tarda demasiado: la consulta continúa con las demás; se indica el estado de cada fuente. Con una sola fuente disponible, la confianza no supera media.
-- Fallan todas las fuentes: si hay datos guardados recientes, se usan con antigüedad informada; si no, se dice con claridad y no se genera pronóstico.
-- Sin conexión: solo puede mostrar la última consulta guardada, identificada como tal.
-- Consultas repetidas en poco tiempo: se reutilizan datos descargados hace menos de 3 horas salvo que el usuario pida actualizar; datos ≥ 3 h se consideran no reutilizables como frescos (nueva descarga o modo solo-guardado con antigüedad informada).
-- Modelos en desacuerdo: se muestran por separado y baja la confianza; no se ocultan con un promedio.
-- Modelos no independientes (mismo origen/servicio): no cuentan como confirmación mutua.
-- Mar de viento vs marejada de fondo: no se confunden.
-- Swell en crecimiento o descenso: se informa llegada / pico / bajada cuando haya respaldo.
-- Viento que rota: se evalúa por franja; no se usa un valor medio del día.
-- Tamaño crece pero viento empeora: no es mejora de calidad.
-- Swell llega a la zona pero un pico no lo recibe: no se asume respuesta uniforme de la costa.
-- Altura de modelo ≠ altura percibida: el mínimo 0,5 m es sobre ola real; la estimación inicial usa **tamaño surfeable ≈ k × Hs**, con k = 0,5 configurable, visible en los resultados y no validado como conversión física de rompiente.
-- Menos de 2 horas válidas en un día: ese día no tiene ventana y no se clasifica como Sin olas surfeables.
-- Datos que no distinguen picos o ubicación sobre tierra: se detecta, se informa; no se presentan diferencias no respaldadas.
-- Fuente deja de ser gratuita o cambia condiciones: se sigue con las demás; nunca se activa un costo.
-- Referencia vs sistema discrepan: no se declara quién tiene razón; se compara contra lo observado.
-- Pocas o ninguna observación: puntaje y confianza no se presentan como probabilidades.
-- Aviso aislado: ajustes acotados, reversibles y contrastados con casos pasados; no cambio drástico por un único caso.
+- One source fails or takes too long: the query continues with the others; each source's status is shown. With a single available source, confidence does not exceed medium.
+- All sources fail: if recent stored data exist, they are used with age reported; if not, this is stated clearly and no forecast is generated.
+- No connectivity: only the last stored query may be shown, identified as such.
+- Repeated queries in a short time: data downloaded less than 3 hours ago are reused unless the user forces refresh; data ≥ 3 h are not reusable as fresh (new download or stored-only mode with age reported).
+- Models disagree: shown separately and confidence drops; not hidden by an average.
+- Non-independent models (same origin/service): do not count as mutual confirmation.
+- Wind sea vs groundswell: not confused.
+- Swell building or dropping: arrival / peak / drop reported when supported.
+- Wind rotating: evaluated per slot; no all-day average.
+- Size grows but wind worsens: not a quality improvement.
+- Swell reaches the zone but a peak does not receive it: the coast is not assumed uniform.
+- Model height ≠ perceived height: the 0.5 m minimum is on the real wave; initial estimate uses **surfable size ≈ k × Hs**, with k = 0.5 configurable, visible in results, not validated as a physical breaking-height conversion.
+- A plausible estimated-size range crosses 0.5 m: show the range and Uncertain; do not force either No surfable waves or Small but surfable from the point estimate alone.
+- Fewer than 2 valid hours in a day: that day has no window and is not classified as No surfable waves.
+- A query is made at or after 20:00 Uruguay local time: today is shown as Analysis window completed with no condition or best window; the horizon remains today through day +4.
+- The selected source exposes samples less frequently than hourly: the system MUST NOT silently claim a precise contiguous 2-hour window. Phase 0 research must select an hourly source or define and label a derived interpolation rule; without sufficient support, the window is Uncertain or unavailable.
+- Data that do not distinguish peaks or land on land: detected and reported; unsupported differences are not presented as precise.
+- A source stops being free or changes terms: continue with others; never activate a cost.
+- Reference vs system disagree: do not declare who is right; compare against observation.
+- Few or no observations: scores and confidence are not presented as probabilities.
+- Isolated report: adjustments bounded, reversible, checked against past cases; no drastic criteria change from a single case.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-#### Consulta a demanda
+#### On-demand query
 
-- **FR-001**: El sistema DEBE funcionar a demanda: al recibir la orden del usuario, obtener datos, procesarlos y entregar el pronóstico sin depender de procesos previos ni permanentes.
-- **FR-002**: El sistema DEBE entregar el resultado en una interfaz de terminal (texto) simple: resumen inmediato y detalle por pico/franja a pedido, sin requerir navegador ni aplicación gráfica. *(First delivery)*
-- **FR-003**: El sistema DEBE reutilizar datos descargados hace menos de 3 horas para no repetir descargas innecesarias; DEBE permitir forzar actualización o trabajar solo con lo guardado (informando antigüedad). Pasadas las 3 horas, una consulta normal DEBE intentar obtener datos nuevos.
+- **FR-001**: The system MUST run on demand: on user command, obtain data, process it, and deliver the forecast without depending on prior or permanent processes.
+- **FR-002**: The system MUST deliver results in a simple terminal (text) interface: immediate summary and peak/slot detail on request, without requiring a browser or GUI. *(First delivery)*
+- **FR-003**: The system MUST reuse data downloaded less than 3 hours ago to avoid unnecessary downloads; MUST allow forced refresh or stored-only mode (reporting age). After 3 hours, a normal query MUST try to obtain new data.
 
-#### Fuentes y datos
+#### Sources and data
 
-- **FR-004**: El sistema DEBE usar exclusivamente fuentes y herramientas de costo cero, sin suscripciones, pruebas que pasen a pago ni créditos que se agoten.
-- **FR-005**: El sistema DEBE respetar las condiciones de uso de cada fuente (uso personal, límites de consulta, atribución).
-- **FR-006**: El sistema DEBE informar, para cada dato mostrado, de qué fuente y modelo proviene y de cuándo es.
-- **FR-007**: El sistema NO DEBE tratar como independientes a fuentes que comparten origen.
-- **FR-008**: El sistema DEBE distinguir dato medido, dato pronosticado, inferencia física y regla empírica.
-- **FR-009**: El sistema NO DEBE extraer automáticamente contenido de páginas web de terceros cuando su condición de uso no lo permita.
-- **FR-010**: El sistema DEBE seguir funcionando con las fuentes restantes cuando una falle o cambie sus condiciones.
+- **FR-004**: The system MUST use exclusively zero-cost sources and tools, without subscriptions, free trials that become paid, or depleting credits.
+- **FR-005**: The system MUST respect each source's terms of use (personal use, query limits, attribution).
+- **FR-006**: The system MUST inform, for each displayed datum, which source and model it comes from and when it is from.
+- **FR-007**: The system MUST NOT treat sources that share an origin as independent.
+- **FR-008**: The system MUST distinguish measured data, forecast data, physical inference, and empirical rule.
+- **FR-009**: The system MUST NOT automatically extract third-party web content when their terms disallow it.
+- **FR-010**: The system MUST keep working with remaining sources when one fails or changes terms.
 
-#### Perfiles de picos
+#### Peak profiles
 
-- **FR-011**: El sistema DEBE mantener un perfil por pico, editable por el usuario sin modificar el sistema: ubicación, orientación, direcciones de swell ideales (y si se conocen aceptables/bloqueadas), vientos terrales, abrigo por dirección, período ideal y tipo de fondo.
-- **FR-012**: El sistema DEBE derivar el estado del perfil (incompleto, provisional o calibrado) de su contenido y de la decisión del usuario, y comportarse según ese estado (US3).
-- **FR-013**: El sistema NO DEBE estimar ni inventar campos esenciales del perfil (ubicación válida, orientación, swell ideales y período ideal). Los vientos terrales conocidos son información útil para evaluar la calidad, pero no son un requisito para determinar si puede haber olas surfeables ni deben ser un factor decisivo por sí solos. Campos opcionales faltantes PUEDEN estimarse con regla documentada, marcarse como estimados y ser corregibles; si no hay base, quedan desconocidos. Una estimación no habilita un perfil incompleto.
-- **FR-014**: El sistema DEBE informar cuando varios picos reciben los mismos datos de origen (diferencias solo por perfiles).
-- **FR-015**: El sistema DEBE permitir agregar picos o zonas nuevas aportando solo sus perfiles.
+- **FR-011**: The system MUST maintain a per-peak profile, editable by the user without changing the system: location, orientation, ideal swell directions (and acceptable/blocked if known), offshore winds, wind shelter by direction, ideal period, and bottom type.
+- **FR-012**: The system MUST derive profile status from content and user decision, and behave accordingly (US3). Missing any essential field yields `incomplete`, even if the file says `calibrated`. Complete essential fields with no user calibration yield `provisional`. A user-marked `calibrated` value is honored only when essential fields are complete. The system MUST NEVER promote a profile to `calibrated` by itself.
+- **FR-013**: The system MUST NOT invent essential profile fields (valid location, orientation, ideal swell, and ideal period). Known offshore winds are useful for quality assessment but are not a requirement to decide whether surfable waves may exist and MUST NOT be decisive alone. Missing optional fields MAY be estimated with a documented rule, marked as estimated, and correctable; if there is no basis, they remain unknown. An estimate does not enable an incomplete profile.
+- **FR-014**: The system MUST report when several peaks receive the same origin data (differences only from profiles).
+- **FR-015**: The system MUST allow adding new peaks or zones by supplying only their profiles.
 
-#### Evaluación y condición de surf
+#### Evaluation and surf condition
 
-- **FR-016**: El sistema DEBE evaluar para cada pico y franja la compatibilidad entre oleaje, viento y perfil. En la primera entrega DEBE usar una regla inicial provisional y configurable **tamaño surfeable estimado ≈ k × Hs**, con valor inicial **k = 0,5** (Hs = altura significativa del modelo). El valor vigente de k y el tamaño calculado DEBEN mostrarse en los resultados. La regla DEBE estar documentada y poder reemplazarse o calibrarse por pico/criterio; NO debe presentarse como conversión física validada ni predicción de altura de rompiente. Variaciones respecto de las condiciones ideales no descartan automáticamente olas surfeables.
-- **FR-017**: El sistema DEBE clasificar el viento respecto de cada pico como terral, terral de costado, de costado, maral de costado o maral, según orientación y abrigo, con intensidad según velocidad sostenida en km/h: **suave** 0 ≤ v < 10, **moderado** 10 ≤ v < 20, **fuerte** 20 ≤ v < 35, **muy fuerte** v ≥ 35. Los intervalos no se solapan, las bandas son documentadas y reemplazables, y el sistema DEBE describir la rotación diaria. La clasificación del viento es un indicador de calidad, no un requisito para la existencia de olas surfeables ni un factor único que determine la calidad global; NO se debe exigir viento terral.
-- **FR-018**: El sistema DEBE distinguir mar de viento local de marejada lejana cuando los datos lo permitan; informar si el swell crece, está en pico o baja cuando haya respaldo; estimar tamaño surfeable distinto de la altura bruta del modelo (FR-016); si no hay respaldo para el umbral 0,5 m, mostrar rango/incertidumbre o Incierto; NO interpretar altura significativa como altura de olas que rompen.
-- **FR-019**: El sistema DEBE clasificar cada franja y cada día de cada pico en la escala común o en Incierto / Pronóstico incompleto. Sin olas surfeables = tamaño estimado < 0,5 m. Por encima del umbral, DEBE aplicar bandas de tamaño documentadas y sin solapamiento como techo del grado: 0,5 ≤ h < 0,8 m; 0,8 ≤ h < 1,2 m; 1,2 ≤ h < 1,8 m; h ≥ 1,8 m. Si viento (dirección/intensidad), período o dirección del swell son desfavorables respecto del perfil, PUEDEN bajar el grado como máximo un escalón, considerando el conjunto de factores y sin que uno solo sea determinante; NUNCA subir por encima del techo del tamaño.
-- **FR-020**: El sistema DEBE basar la condición del día de un pico en su mejor ventana contigua de al menos 2 horas dentro de la **franja horaria de análisis 06:00–20:00 hora local de Uruguay** (banda fija; no usa tablas de orto/ocaso y no representa necesariamente las horas reales de luz), no en el promedio del día. Para el día actual, la ventana solo puede usar horas restantes dentro de esa banda (véase FR-024).
-- **FR-021**: El sistema DEBE informar si el tamaño surfeable estimado podría alcanzar 0,5 m (ola real). Viento (incluyendo si es terral o maral), período y dirección del swell gradúan la calidad, pero no son requisitos de surfabilidad ni descartan por sí solos la existencia de olas. La dirección del viento no debe tener un peso desproporcionado ni ser determinante por sí sola. Sin respaldo suficiente: Incierto o rango. NO recomendar ni desaconsejar surfear o viajar.
-- **FR-022**: El sistema DEBE mostrar solo lo necesario: no incluye energía del oleaje, temperatura del agua ni traje sugerido.
-- **FR-023**: El sistema DEBE ajustar precisión al horizonte: hoy y mañana — 06:00/12:00/18:00 y ventana ≥ 2 h; pasado mañana a día 4 — condición del día y franja favorable sin hora precisa; días 5–10 — solo tendencia (US5).
-- **FR-024**: Para el día actual, DEBE considerar solo horas restantes e indicar hora de consulta.
-- **FR-025**: En segunda etapa, DEBE acompañar cada día/pico con análisis breve en lenguaje natural marcado como automático. En primera entrega: motivo breve basado en reglas, sin narrativa elaborada.
-- **FR-026**: El sistema DEBE ofrecer tendencia a mediano plazo (días 5–10) con tamaño, período y dirección esperados y llegada estimada, distinta del operativo, sin condición por pico/hora. Se limita al swell ya mostrado en camino; fenómenos aún no generados se evalúan en el plan. *(Second stage — US5)*
+- **FR-016**: The system MUST evaluate compatibility of swell, wind, and profile for each peak and slot. First delivery MUST use a provisional configurable initial rule **estimated surfable size ≈ k × Hs**, with initial **k = 0.5** (Hs = model significant wave height). The current k and calculated size MUST be shown in results. The rule MUST be documented and replaceable/calibratable per peak/criteria; MUST NOT be presented as a validated physical conversion or breaking-height prediction. Deviations from ideal conditions MUST NOT automatically discard surfable waves.
+- **FR-017**: The system MUST classify wind relative to each peak as offshore, offshore-side, cross-shore, onshore-side, or onshore, per orientation and shelter, with intensity by sustained speed in km/h: **light** 0 ≤ v < 10, **moderate** 10 ≤ v < 20, **strong** 20 ≤ v < 35, **very strong** v ≥ 35. Intervals do not overlap; bands are documented and replaceable; daily rotation MUST be described. Wind classification is a quality indicator, not a requirement for surfable waves nor a sole determinant of overall quality; offshore wind MUST NOT be required.
+- **FR-018**: The system MUST distinguish local wind sea from distant groundswell when data allow; report whether swell is building, peaking, or dropping when supported; estimate surfable size distinct from raw model height (FR-016); and MUST NOT treat significant wave height as breaking-wave height. Size-range uncertainty follows FR-016 and the versioned `k`/`k_range` policy. If that range crosses the 0.5 m threshold, the system MUST show the range and Uncertain rather than classify from the point estimate alone. First delivery MUST compute swell trend from consecutive hourly swell height, falling back to total wave height, when at least three samples exist inside the analysis window: last-third mean vs first-third mean, with a 10% or 0.1 m change (whichever is larger) marking building or dropping, and a middle-third maximum with both ends lower marking peaking; otherwise `steady`. Fewer than three hourly samples, or coarser input, yields `unsupported`. The trend is a labeled derived series, not a physical arrival forecast.
+- **FR-019**: The system MUST classify each slot and each peak-day on the common scale or as Uncertain / Incomplete forecast. No surfable waves = an estimated range supported entirely below 0.5 m. Above the threshold, MUST apply documented non-overlapping size bands as grade ceiling: 0.5 ≤ h < 0.8 m; 0.8 ≤ h < 1.2 m; 1.2 ≤ h < 1.8 m; h ≥ 1.8 m. Quality factors follow the Quality rule: apply at most one downgrade only when two or more of swell direction, period, and wind are unfavorable; MUST NEVER lower a result with size ≥ 0.5 m below Small but surfable, and MUST NEVER raise it above the size ceiling. Each day summary MUST include a short rule-based headline, dominant swell, wind rotation through the analysis window (start vs end slot, not a daily average), per-peak condition, and which complete peaks share the highest resolved grade (“best peaks”). Fewer than two valid hours yields no best window and MUST NOT be classified as No surfable waves solely for that reason.
+- **FR-020**: The system MUST base a peak's day condition on its best contiguous window of at least 2 hours within the **analysis time window 06:00–20:00 Uruguay local time** (fixed band; does not use sunrise/sunset tables and does not necessarily represent actual daylight), not on the day average. For the current day, the window may only use remaining hours in that band (see FR-024).
+- **FR-021**: The system MUST report whether estimated surfable size could reach 0.5 m (real wave). Wind (including offshore or onshore), period, and swell direction grade quality but are not surfability requirements and do not alone discard wave existence. Wind direction MUST NOT have disproportionate weight or be decisive alone. Without sufficient support: Uncertain or a range. MUST NOT recommend or discourage surfing or traveling.
+- **FR-022**: The system MUST show only what is needed: no wave energy, water temperature, or suggested wetsuit.
+- **FR-023**: The system MUST adjust precision by horizon: today and tomorrow — 06:00/12:00/18:00 and ≥ 2 h window; day after tomorrow through day 4 — day condition and favorable slot without exact hour; days 5–10 — outlook only (US5).
+- **FR-024**: For the current day, MUST consider only remaining hours and show query time. At or after 20:00 Uruguay local time, the system MUST show today as Analysis window completed, MUST NOT emit a condition or best window for today, and MUST preserve the fixed today-through-day-+4 horizon rather than extending it to day +5.
+- **FR-025**: In the third stage, MUST accompany each day/peak with a brief natural-language analysis marked as automatic. First delivery MUST emit stable English `reason_codes` and Spanish labels for the rules that produced the state (size band, range crossing, two-factor downgrade, missing input, stale data, single model family, provisional profile, shared grid, unsupported window). No elaborate narrative.
+- **FR-026**: The system MUST offer a medium-term outlook (days 5–10) with expected size, period, and direction and estimated arrival, distinct from operational, without per-peak/per-hour condition. Limited to swell already shown en route; phenomena not yet generating swell are evaluated in the plan. *(Third stage — US5)*
 
-#### Incertidumbre y confianza
+#### Uncertainty and confidence
 
-- **FR-027**: En primera entrega, confianza alta/media/baja por reglas documentadas (disponibilidad, antigüedad, completitud, estado del perfil). Datos reutilizados con antigüedad ≥ 3 h (modo solo-guardado u originados tras fallo de descarga) DEBEN tratarse como antiguos a efectos de confianza. Ausencia de dato necesario NO es señal favorable.
-- **FR-028**: Confianza limitada a media con una sola fuente/modelo útil o pico provisional; baja si datos incompletos, antiguos o insuficientes.
-- **FR-029**: NO presentar puntajes ni confianza como probabilidades hasta contrastarlos con observaciones.
-- **FR-030**: En segunda etapa, mostrar valores por modelo, desacuerdo y rango. En primera entrega, si hay desacuerdo evidente, no ocultarlo y reducir confianza.
-- **FR-031**: Falta de un componente de confianza = dato faltante informado, no buena señal.
+- **FR-027**: First delivery: confidence high/medium/low via documented rules (availability, age, completeness, profile status). Reused data aged ≥ 3 h (stored-only or after download failure) MUST be treated as stale for confidence. Absence of a needed datum is NOT a favorable signal.
+- **FR-028**: Confidence capped at medium with a single useful source/model or provisional peak; low if data are incomplete, stale, or clearly insufficient.
+- **FR-029**: MUST NOT present scores or confidence as probabilities until contrasted with observations.
+- **FR-030**: Third stage: show per-model values, disagreement, and range. First delivery: if clear disagreement is available, do not hide it and reduce confidence.
+- **FR-031**: Missing confidence component = reported missing datum, not a good signal.
 
-#### Transparencia y trazabilidad
+#### Transparency and traceability
 
-- **FR-032**: Cada condición DEBE rastrearse hasta datos, fuentes, reglas y perfil.
-- **FR-033**: DEBE advertir siempre que los modelos regionales no distinguen picos cercanos.
+- **FR-032**: Each current or historical condition MUST be traceable to the normalized inputs, source/provider/model identity and timestamps, effective rules and parameters, criteria version, and peak-profile version that produced it.
+- **FR-033**: MUST always warn that regional models do not distinguish nearby peaks. First delivery MUST show this on the main forecast result and in JSON (`shared_regional_input`), not only in Help/About.
+- **FR-035**: From the first delivery onward, the system MUST save every emitted query as an immutable local snapshot. Each snapshot MUST include query time and timezone, source/model status and provenance, issue/valid/download times, normalized inputs used, effective criteria and profile versions, effective configurable parameters including `k`, emitted conditions and confidence, data age, and incidents. Later features MAY link observations and adjustments to snapshots, but MUST NOT overwrite an original snapshot.
 
-#### Observaciones y validación *(from third stage / US6–US7)*
+#### Observations and validation *(from second and later stages / US6–US7)*
 
-- **FR-034**: Permitir registrar observaciones con escala común, tamaño, viento y tipo (subjetiva/instrumental), sin mezclar tipos.
-- **FR-035**: Conservar el pronóstico emitido en cada consulta para comparar con lo observado.
-- **FR-036**: Permitir ingresar a mano pronósticos de referencia, guardarlos separados y compararlos con lo observado, sin extracción automática.
-- **FR-037**: Evaluar desempeño por anticipación (mismo día, 1–4 días, tendencia 5–10): error de tamaño/período/dirección, aciertos/errores de condición, falsos positivos, oportunidades no detectadas, calidad de franja; comparar con referencias.
-- **FR-038**: En US6, registrar discrepancias y evaluar posibles ajustes; aplicación automática según FR-047–FR-051.
+- **FR-034**: Allow recording observations with the common condition scale, size, wind, and type (subjective/instrumental), without mixing types.
+- **FR-036**: Allow manually entering reference forecasts, store them separately, compare with observation, without automatic extraction.
+- **FR-037**: Evaluate performance by lead time (same day, 1–4 days, days 5–10 outlook): size/period/direction error, condition hits/misses, false positives, missed opportunities, slot quality; compare with references.
+- **FR-038**: In US6 second stage, record discrepancies and support manual versioned reversible adjustments. In the fourth stage, evaluate adjustment proposals and automatic application per FR-047–FR-051.
 
-#### Cambios entre consultas *(US8)*
+#### Changes between queries *(US8)*
 
-- **FR-039**: Comparar con consulta anterior solo si tiene < 72 h; si no, "sin comparación reciente".
+- **FR-039**: Compare with prior query only if < 72 h old; otherwise "no recent comparison".
 
-#### Operación y costo
+#### Operation and cost
 
-- **FR-040**: Completar una consulta típica en tiempo breve (SC-001).
-- **FR-041**: NO requerir servidores, tareas programadas ni procesos permanentes.
-- **FR-042**: Registrar incidencias (fuentes caídas, datos faltantes, cambios de condiciones) y mostrarlas en el resultado.
-- **FR-043**: Presentarse en español y mostrar horas en hora local de Uruguay.
+- **FR-040**: Complete a typical query in short time (SC-001).
+- **FR-041**: MUST NOT require servers, scheduled jobs, or permanent processes.
+- **FR-042**: Record incidents (down sources, missing data, term changes) and show them in the result.
+- **FR-043**: Present UI text in Spanish and show times in Uruguay local time.
 
-#### Flexibilidad y ajuste del criterio
+#### Flexibility and criteria adjustment
 
-- **FR-044**: Permitir cambiar interpretación (perfiles, tolerancias, relación de alturas, clasificación de viento, escala) sin rehacer el sistema ni perder registros.
-- **FR-045**: Permitir incorporar métodos alternativos y compararlos sobre los mismos datos.
-- **FR-046**: Indicar en cada resultado con qué criterio se calculó.
-- **FR-047**: En US6, ante aviso de inconsistencia: registrar discrepancia, identificar criterios; solo con regla justificable y evidencia suficiente aplicar ajuste automático acotado y reversible. Un aviso aislado no basta para demostrar que la regla general es incorrecta.
-- **FR-048**: Tras ajuste: recalcular vigente, mostrar cambios, conservar original y observación separados; si no concuerda con observación, informarlo.
-- **FR-049**: Guardar cada ajuste con fecha y motivo y permitir revertirlo.
-- **FR-050**: Acotar cada ajuste, comprobarlo contra casos pasados y dejar constancia si mejora el nuevo caso pero empeora anteriores.
-- **FR-051**: Si la causa es de las fuentes: registrar y NO modificar criterio. Si la causa es incierta: conservar original, registrar observación y proponer ajuste para revisión.
+- **FR-044**: Allow changing interpretation (profiles, tolerances, height relation, wind classification, scale) without rebuilding the system or losing records.
+- **FR-045**: Later stage: allow alternative prediction/interpretation methods and compare them on the same data. First delivery uses one versioned criteria set; a different method is compared only by editing that configuration and replaying a snapshot (FR-044), not by a plugin or parallel-engine framework.
+- **FR-046**: Indicate in each result which criteria were used.
+- **FR-047**: In the fourth stage of US6, on inconsistency report: record discrepancy, identify criteria; only with a justifiable rule and sufficient evidence apply an automatic bounded reversible adjustment. An isolated report alone is not enough to prove the general rule wrong. The second-stage workflow limits changes to explicit manual versioned reversible adjustments.
+- **FR-048**: After adjustment: recalculate current, show changes, keep original and observation separate; if it disagrees with observation, report it.
+- **FR-049**: Store each adjustment with date and reason and allow revert.
+- **FR-050**: Bound each adjustment, check against past cases, and record when it improves the new case but worsens prior ones.
+- **FR-051**: If the cause is source data: record and MUST NOT change criteria. If cause is uncertain: keep original, record observation, propose adjustment for review.
 
-#### Crecimiento
+#### Growth
 
-- **FR-052**: Poder incorporar fuentes nuevas sin cambiar lo que el usuario ve ni cómo se interpretan las condiciones.
-- **FR-053**: Poder ofrecerse más adelante con otra forma de uso (web o escritorio) sin rehacer funciones ni perder datos. Hoy: terminal.
-- **FR-054**: Ser lo más simple posible; complejidad adicional justificada por beneficio al usuario.
-- **FR-055**: Poder crecer en picos, fuentes, días y métodos sin cambiar lo que ya funciona.
+- **FR-052**: Be able to add new data sources without changing what the user sees or how conditions are interpreted.
+- **FR-053**: Be able to offer another form of use later (e.g. web or desktop) without rebuilding functions or losing data. Today: terminal.
+- **FR-054**: Be as simple as possible to use and maintain; extra complexity justified by user benefit.
+- **FR-055**: Be able to grow in peaks, sources, days, and evaluation methods without changing what already works.
 
 ### Key Entities
 
-- **Pico**: lugar de surf evaluado individualmente (nombre, zona, ubicación, perfil asociado).
-- **Perfil del pico**: cómo funciona el pico (orientación; swell ideales/aceptables/bloqueadas; vientos terrales; abrigo por dirección; períodos útiles; fondo; estado incompleto/provisional/calibrado).
-- **Criterio de interpretación**: reglas/fórmulas versionadas y configurables (tolerancias, bandas de tamaño→grado techo sin solapamiento, regla de bajada máxima de un escalón por calidad, relación inicial configurable altura modelo↔tamaño surfeable **k × Hs** con k = 0,5, clasificación de viento, escala de condición, versión y fecha).
-- **Criterio de surfeable**: tamaño mínimo estimado de 0,5 m sobre ola real (usando inicialmente k × Hs, con k = 0,5 configurable y visible); viento/período/dirección del swell son indicadores de calidad, no requisitos de surfabilidad; los factores desfavorables pueden bajar el grado techo como máximo un escalón, sin que un solo factor sea determinante, y nunca elevarlo.
-- **Fuente de datos**: origen externo (proveedor, modelo, condiciones de uso, costo, estado disponible/degradada/caída).
-- **Pronóstico regional**: lo que una fuente/modelo dice hora a hora (oleaje total y por componente, viento/ráfagas; emisión, descarga, validez).
-- **Consulta**: una ejecución a demanda (fuentes y estado, versión de criterio, horizonte, incidencias, antigüedad).
-- **Condición de un pico en una franja**: tamaño estimado, período, dirección y favorabilidad, viento (clase/intensidad/favorabilidad), condición en escala, valores por modelo.
-- **Ventana**: mejor tramo continuo ≥ 2 h dentro de la franja horaria de análisis 06:00–20:00 hora local de Uruguay (inicio, fin, condición); no equivale necesariamente a las horas reales de luz.
-- **Resumen del día**: titular, rango de tamaño, swell dominante, viento y rotación, condición por pico, mejor pico/franja, confianza, motivo/análisis.
-- **Tendencia a mediano plazo**: días 5–10 (tamaño/período/dirección esperados, llegada, confianza).
-- **Confianza**: nivel alta/media/baja, componentes, motivo de límites.
-- **Observación**: lo encontrado realmente (fecha/hora/pico/condición/tamaño/viento/tipo/notas).
-- **Pronóstico de referencia**: pronóstico ajeno ingresado a mano (emisión, día, pico/zona, tamaño, calificación, origen).
-- **Discrepancia**: contradicción observada/referencia vs sistema (estado pendiente/ajustada/descartada).
-- **Ajuste de criterio**: cambio aplicado (qué, motivo, discrepancias, fecha, versión anterior reversible).
-- **Informe de desempeño**: aciertos/errores por anticipación, falsos positivos, oportunidades no detectadas, comparación con referencia, ajustes sugeridos.
+- **Peak**: surf spot evaluated individually (name, zone, location, associated profile).
+- **Peak profile**: how the peak works (orientation; ideal/acceptable/blocked swell; offshore winds; shelter by direction; useful periods; bottom; status incomplete/provisional/calibrated).
+- **Interpretation criteria**: versioned configurable rules/formulas (tolerances, non-overlapping size→ceiling-grade bands, max one-step quality downgrade with Small but surfable as the floor for h ≥ 0.5 m, initial configurable model↔surfable relation **k × Hs** with k = 0.5, plausible-range uncertainty method, wind classification, condition scale, version and date).
+- **Surfable criteria**: minimum estimated size 0.5 m on real wave (initially via k × Hs, k = 0.5 configurable and visible; see FR-016). Wind/period/swell direction are quality indicators, not surfability requirements. Two or more unfavorable factors may lower the ceiling grade by at most one step; one factor is not decisive; never below Small but surfable when h ≥ 0.5 m, and never raise it. A plausible range crossing 0.5 m yields Uncertain.
+- **Data source**: external origin (provider, model, terms, cost, status available/degraded/down).
+- **Regional forecast**: what a source/model says hour by hour (total and component swell, wind/gusts; issue, download, validity times).
+- **Query**: one on-demand run (query time/timezone, sources/models and status, issue/valid/download times, criteria and profile versions, effective parameters, horizon, incidents, data age, normalized inputs, and emitted results).
+- **Query snapshot**: immutable local record of an emitted query, retained from the MVP onward and linkable by later observations, discrepancies, and adjustments without overwriting the original.
+- **Peak condition in a slot**: estimated size, period, direction and favorability, wind (class/intensity/favorability), condition on scale, per-model values.
+- **Window**: best contiguous ≥ 2 h stretch within analysis time window 06:00–20:00 Uruguay local (start, end, condition); not necessarily actual daylight.
+- **Day summary**: headline, size range, dominant swell, wind and rotation, condition per peak, best peak/slot, confidence, reason/analysis.
+- **Medium-term outlook**: days 5–10 (expected size/period/direction, arrival, confidence).
+- **Confidence**: level high/medium/low, components, reason for any cap.
+- **Observation**: what the user actually found (date/time/peak/condition/size/wind/type/notes).
+- **Reference forecast**: third-party forecast entered manually (issue date, day, peak/zone, size, rating, origin).
+- **Discrepancy**: observation/reference contradicts the system (status pending/adjusted/dismissed).
+- **Criteria adjustment**: applied change (what, reason, discrepancies, date, prior version for revert).
+- **Performance report**: hits/misses by lead time, false positives, missed opportunities, reference comparison, suggested adjustments.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: Una consulta completa (orden → resumen en pantalla) tarda menos de 30 segundos con conexión normal en al menos el 90 % de las consultas.
-- **SC-002**: Costo de uso = cero: ninguna función requiere pago, tarjeta ni suscripción.
-- **SC-003**: El 100 % de las condiciones puede rastrearse hasta datos, fuentes, reglas y perfil.
-- **SC-004**: Ningún pico con perfil incompleto recibe condición en ninguna consulta.
-- **SC-005**: Un día sin datos suficientes nunca se muestra como Sin olas surfeables.
-- **SC-006**: Con una o más fuentes caídas (pero no todas), la consulta entrega resultado en el 100 % de los casos de prueba y muestra el estado de cada fuente.
-- **SC-007**: El usuario entiende la condición de hoy y de los próximos días leyendo el resumen en menos de 2 minutos.
-- **SC-008**: Agregar un pico nuevo requiere únicamente completar su perfil, sin cambios en el funcionamiento del sistema.
-- **SC-009**: Con ≥ 20 observaciones, el informe de desempeño cubre cada anticipación con datos y declara las que no.
-- **SC-010**: Con ≥ 20 observaciones y referencias ingresadas, el informe compara acierto del sistema vs referencia.
-- **SC-011**: Metas de acierto se fijan después del primer informe; hasta entonces ningún resultado se presenta como validado.
-- **SC-012**: Cambiar un criterio (p. ej. tolerancia de direcciones) no exige modificar el funcionamiento del sistema.
-- **SC-013**: En US6, ajuste solo con regla justificable y evidencia suficiente; si no, registra discrepancia y propone cuando corresponda; siempre conserva original y muestra observación, vigente y cambios por separado.
-- **SC-014**: Sumar pico, fuente o forma nueva de uso no obliga a rehacer lo que ya funciona.
-- **SC-015**: Lo que ya funcionaba sigue dando los mismos resultados tras sumar pico, fuente o forma de uso.
+- **SC-001**: A full query (command → summary on screen) takes under 30 seconds on a normal connection in at least 90% of queries.
+- **SC-002**: Cost of use = zero: no function requires payment, card, or subscription.
+- **SC-003**: 100% of emitted conditions, including those from prior queries, are reproducible from an immutable snapshot that identifies normalized inputs, source/model provenance and times, effective rules and parameters, criteria/profile versions, confidence, and incidents.
+- **SC-004**: No peak with an incomplete profile receives a condition in any query.
+- **SC-005**: A day without sufficient data is never shown as No surfable waves.
+- **SC-006**: With one or more sources down (but not all), the query returns a result in 100% of test cases and shows each source's status.
+- **SC-007**: The user understands today and coming days by reading the summary in under 2 minutes.
+- **SC-008**: Adding a new peak requires only completing its profile, with no change to how the system works.
+- **SC-009**: With ≥ 20 observations, the performance report covers each lead time that has data and explicitly states those that do not.
+- **SC-010**: With ≥ 20 observations and entered references, the report compares system vs reference accuracy.
+- **SC-011**: Accuracy targets are set after that first report; until then no result is presented as validated.
+- **SC-012**: Changing a criterion (e.g. direction tolerance) does not require changing how the system works.
+- **SC-013**: In US6, adjust only with a justifiable rule and sufficient evidence; otherwise record discrepancy and propose when appropriate; always keep original and show observation, current result, and changes separately.
+- **SC-014**: Adding a peak, source, or new form of use does not force rebuilding what already works.
+- **SC-015**: What already worked keeps producing the same results after adding a peak, source, or form of use.
+- **SC-016**: In 100% of boundary tests, a supported size ≥ 0.5 m is never downgraded to No surfable waves, and a plausible range that crosses 0.5 m is reported as Uncertain.
+- **SC-017**: In 100% of queries at or after 20:00 Uruguay local time, today is marked Analysis window completed without a condition or best window, and the horizon does not extend beyond day +4.
 
 ## Assumptions
 
-- Un único usuario, uso personal; terminal de texto y conexión a internet al consultar (salvo modo solo-guardado).
-- El usuario aporta perfiles. Esenciales para interpretar el pico: ubicación válida, orientación, swell ideales y período ideal. Los vientos terrales conocidos son un atributo útil del perfil para evaluar calidad, pero no son una condición obligatoria para declarar olas surfeables ni para considerar buenas las condiciones. Opcionales (estimables si hay base): direcciones aceptables/bloqueadas, período mínimo, abrigo y fondo.
-- Perfiles actuales describen ideales generales; variaciones razonables también pueden producir ≥ 0,5 m y deben estimarse e informarse como tales.
-- Datos de oleaje/viento de modelos globales de resolución gruesa; no hay boyas direccionales confiables cercanas ni verdad de terreno automática.
-- Altura de modelo ≠ altura percibida; relación inicial provisional y configurable **tamaño surfeable estimado ≈ k × Hs**, con k = 0,5 al inicio. El valor vigente de k y el resultado se muestran al usuario; la relación no es una conversión física validada y podrá revisarse con observaciones.
-- Un sitio uruguayo de referencia sirve de modelo de *formato* y de comparación futura; **no** es fuente de datos del sistema.
-- Fuentes concretas se eligen en el plan; gratuitas y de uso personal. Varios modelos del mismo servicio ≠ independencia.
-- Tendencia 5–10 se limita al swell ya en camino; ciclones aún no formados fuera de la primera versión de esa etapa.
-- Referencias solo por ingreso manual; no consulta automática a sitios de terceros.
-- Marea, temperatura del agua y traje sugerido fuera de alcance.
-- Validación apoyada en consultas que el usuario haga (historial no denso) y, si existen, históricos de fuentes.
-- Anaconda, La Pedrera y otras zonas fuera de la primera versión.
+- Single user, personal use; text terminal and internet when querying (except stored-only mode).
+- User supplies profiles. Essential to interpret a peak: valid location, orientation, ideal swell, and ideal period. Known offshore winds are a useful profile attribute for quality, but not mandatory to declare surfable waves or good conditions. Optional (estimable if there is a basis): acceptable/blocked directions, minimum period, shelter, and bottom.
+- Current profiles describe general ideals; reasonable variations may also produce ≥ 0.5 m and must be estimated and labeled as such.
+- Swell/wind data from coarse global models; no reliable nearby directional buoys or automatic ground truth.
+- Model height ≠ perceived height; initial provisional configurable relation **estimated surfable size ≈ k × Hs**, with k = 0.5 at start. Current k and result are shown to the user; not a validated physical conversion; may be revised with observations.
+- The initial plausible-range uncertainty method around the 0.5 m threshold is selected and justified during Phase 0 research, remains configurable and versioned, and is not presented as a probability.
+- The MVP persists immutable local query snapshots for future validation; observation capture and criteria correction remain later-stage user capabilities.
+- A precise contiguous 2-hour window requires hourly data or an explicitly documented derived method. The plan must prefer hourly data and must not silently interpolate coarser samples.
+- A Uruguayan reference site is a *format* model and future comparison target; **not** a system data source.
+- Concrete sources are chosen in the plan; free and personal-use. Multiple models from one service ≠ independence.
+- Days 5–10 outlook limited to swell already en route; not-yet-formed cyclones out of that stage's first version.
+- References only by manual entry; no automatic querying of third-party sites.
+- Tide, water temperature, and suggested wetsuit out of scope.
+- Validation relies on queries the user makes (sparse history) and, if available, source archives.
+- Anaconda, La Pedrera, and other zones out of first version.
 
 ### Known peak profiles (user-supplied; locations approximate; all provisional)
 
-| Pico | También llamado | Orientación | Fondo | Swell ideal | Período ideal | Viento terral | Ubicación aprox. | Estado |
-|------|-----------------|-------------|-------|-------------|---------------|---------------|------------------|--------|
-| La Aguada | Arachania | E | Arena | E y ESE (SE y SSE más cruzado) | 8–12 s o más | SO, O, ONO | -34.6435, -54.1546 | Provisional |
-| Zanja Honda | Corumbá | S | Arena y roca | S y SE (E y ESE también) | 9–13 s o más | N, NO, O | -34.6606, -54.1859 | Provisional |
-| Los Botes | — | S | Arena y roca | S y SSO | 10–14 s o más | N, NE, ENE | -34.6618, -54.1791 | Provisional |
-| La Serena | — | S | Arena y roca | S y SE (SSO también) | 9–13 s o más | N, NE, ENE | -34.6612, -54.1986 | Provisional |
-| La Balconada | — | S | Arena y roca | S y SE (SSO también) | 9–13 s o más | N, NE, ENE | -34.6653, -54.1630 | Provisional |
+| Peak | Also called | Orientation | Bottom | Ideal swell | Ideal period | Offshore wind | Approx. location | Status |
+|------|-------------|-------------|--------|-------------|--------------|---------------|------------------|--------|
+| La Aguada | Arachania | E | Sand | E and ESE (SE and SSE more crossed) | 8–12 s or more | SW, W, WNW | -34.6435, -54.1546 | Provisional |
+| Zanja Honda | Corumbá | S | Sand and rock | S and SE (E and ESE also) | 9–13 s or more | N, NW, W | -34.6606, -54.1859 | Provisional |
+| Los Botes | — | S | Sand and rock | S and SSW | 10–14 s or more | N, NE, ENE | -34.6618, -54.1791 | Provisional |
+| La Serena | — | S | Sand and rock | S and SE (SSW also) | 9–13 s or more | N, NE, ENE | -34.6612, -54.1986 | Provisional |
+| La Balconada | — | S | Sand and rock | S and SE (SSW also) | 9–13 s or more | N, NE, ENE | -34.6653, -54.1630 | Provisional |
 
-Los cinco picos están en un tramo de pocos kilómetros, menor que la resolución de los modelos; lo que los distingue es exposición, abrigo y fondo. El sistema debe estimar otras direcciones/períodos/vientos que también produzcan ≥ 0,5 m e informarlas como estimaciones.
+The five peaks lie within a few kilometers, less than model resolution; what distinguishes them is exposure, shelter, and bottom. The system must estimate other directions/periods/winds that also produce ≥ 0.5 m and report them as estimates.
 
 ## Constitution Constraints *(mandatory alignment)*
 
-- **Personal / zero cost**: Solo fuentes y herramientas gratuitas; cuotas gratuitas documentadas; nunca activar un costo.
-- **On-demand**: Sin servidores permanentes, alertas autónomas ni procesos en segundo plano.
-- **Honesty**: Confianza e Incierto/Incompleto visibles; no probabilidades sin calibración; desacuerdos no ocultos con promedios.
-- **Inform, don't decide**: Informa condiciones y confianza; la decisión de surfear/viajar es del usuario.
-- **Data integrity**: Distinguir medido / pronosticado / inferido / empírico; altura modelo ≠ rompiente; no inventar campos esenciales del perfil; la conversión inicial de tamaño es configurable, visible y provisional.
-- **Traceability**: Toda condición trazable a datos, fuentes, reglas, perfil y versión de criterio.
-- **Simplicity first**: Primera entrega = camino más simple (US1–US3 + terminal); etapas posteriores solo con necesidad concreta.
-- **Out of scope by default**: Sin cuentas, pagos, telemetría ni multiusuario.
+- **Personal / zero cost**: Free sources and tools only; free-tier quotas documented; never activate a cost.
+- **On-demand**: No permanent servers, autonomous alerts, or background processes.
+- **Honesty**: Confidence and Uncertain/Incomplete visible; no probabilities without calibration; disagreements not hidden by averages.
+- **Inform, don't decide**: Informs conditions and confidence; surfing/travel decision is the user's.
+- **Data integrity**: Distinguish measured / forecast / inferred / empirical; model height ≠ breaking height; do not invent essential profile fields; initial size conversion is configurable, visible, and provisional.
+- **Traceability**: Every current and historical condition traceable to an immutable query snapshot containing data, provenance, effective rules/parameters, profile, and criteria version.
+- **Simplicity first**: First delivery = simplest path (US1–US3 + terminal); later stages only with concrete need.
+- **Out of scope by default**: No accounts, payments, telemetry, or multi-user.

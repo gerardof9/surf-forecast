@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surf-forecast.local/schemas/query-snapshot-1.0.0.json",
+  "title": "Immutable Query Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "snapshot_id",
+    "created_at",
+    "application_version",
+    "request",
+    "source_fetches",
+    "normalized_inputs",
+    "effective_configuration",
+    "presentation",
+    "canonical_result_sha256",
+    "attribution"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "snapshot_id": {
+      "type": "string",
+      "pattern": "^q_[0-9]{8}T[0-9]{6}Z_[a-f0-9]{8,}$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "application_version": {
+      "type": "string"
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "reference_time", "timezone", "horizon_start", "horizon_end"],
+      "properties": {
+        "mode": {
+          "enum": ["normal", "force_refresh", "stored_only", "fixture_replay"]
+        },
+        "reference_time": {"type": "string", "format": "date-time"},
+        "timezone": {"const": "America/Montevideo"},
+        "horizon_start": {"type": "string", "format": "date"},
+        "horizon_end": {"type": "string", "format": "date"},
+        "fixture_id": {"type": ["string", "null"]}
+      }
+    },
+    "source_fetches": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_id",
+          "provider",
+          "service",
+          "dataset",
+          "model",
+          "independence_group",
+          "request_url_redacted",
+          "requested_at",
+          "completed_at",
+          "status",
+          "cache_state",
+          "requested_coordinate",
+          "resolved_coordinate",
+          "valid_time_start",
+          "valid_time_end",
+          "model_run_at",
+          "model_run_availability",
+          "downloaded_at"
+        ],
+        "properties": {
+          "source_id": {"type": "string"},
+          "provider": {"type": "string"},
+          "service": {"type": "string"},
+          "dataset": {"type": "string"},
+          "model": {"type": "string"},
+          "independence_group": {"type": "string"},
+          "request_url_redacted": {"type": "string"},
+          "requested_at": {"type": "string", "format": "date-time"},
+          "completed_at": {"type": ["string", "null"], "format": "date-time"},
+          "status": {
+            "enum": ["success", "fresh_cache", "stale_cache", "failed"]
+          },
+          "cache_state": {"enum": ["miss", "fresh", "stale", "fixture"]},
+          "requested_coordinate": {"$ref": "#/$defs/geoPoint"},
+          "resolved_coordinate": {
+            "oneOf": [
+              {"$ref": "#/$defs/geoPoint"},
+              {"type": "null"}
+            ]
+          },
+          "valid_time_start": {"type": ["string", "null"], "format": "date-time"},
+          "valid_time_end": {"type": ["string", "null"], "format": "date-time"},
+          "model_run_at": {"type": ["string", "null"], "format": "date-time"},
+          "model_run_availability": {
+            "enum": ["available", "unavailable", "unknown"]
+          },
+          "downloaded_at": {"type": ["string", "null"], "format": "date-time"},
+          "http_status": {"type": ["integer", "null"], "minimum": 100, "maximum": 599},
+          "error_code": {"type": ["string", "null"]},
+          "payload_sha256": {
+            "type": ["string", "null"],
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "incident_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "normalized_inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["marine_hours", "wind_hours"],
+      "properties": {
+        "marine_hours": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/marineHour"}
+        },
+        "wind_hours": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/windHour"}
+        }
+      }
+    },
+    "effective_configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criteria_version",
+        "criteria_sha256",
+        "criteria",
+        "profiles"
+      ],
+      "properties": {
+        "criteria_version": {"type": "string"},
+        "criteria_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "criteria": {"type": "object"},
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "peak_id",
+              "profile_version",
+              "profile_sha256",
+              "profile"
+            ],
+            "properties": {
+              "peak_id": {"type": "string"},
+              "profile_version": {"type": "string"},
+              "profile_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "profile": {"type": "object"}
+            }
+          }
+        }
+      }
+    },
+    "presentation": {
+      "$ref": "./forecast-output.schema.json"
+    },
+    "canonical_result_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "provider_url", "license", "license_url", "modified"],
+      "properties": {
+        "text": {"type": "string"},
+        "provider_url": {"type": "string", "format": "uri"},
+        "license": {"const": "CC-BY-4.0"},
+        "license_url": {"type": "string", "format": "uri"},
+        "modified": {"type": "boolean"}
+      }
+    }
+  },
+  "$defs": {
+    "geoPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["latitude", "longitude"],
+      "properties": {
+        "latitude": {"type": "number", "minimum": -90, "maximum": 90},
+        "longitude": {"type": "number", "minimum": -180, "maximum": 180}
+      }
+    },
+    "qualityFlag": {
+      "enum": ["observed", "derived", "missing", "invalid"]
+    },
+    "marineHour": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "valid_at",
+        "wave_height_m",
+        "wave_direction_deg",
+        "wave_period_s",
+        "swell_height_m",
+        "swell_direction_deg",
+        "swell_period_s",
+        "wind_wave_height_m",
+        "wind_wave_direction_deg",
+        "wind_wave_period_s",
+        "quality"
+      ],
+      "properties": {
+        "source_id": {"type": "string"},
+        "valid_at": {"type": "string", "format": "date-time"},
+        "wave_height_m": {"type": ["number", "null"], "minimum": 0},
+        "wave_direction_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "wave_period_s": {"type": ["number", "null"], "minimum": 0},
+        "swell_height_m": {"type": ["number", "null"], "minimum": 0},
+        "swell_direction_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "swell_period_s": {"type": ["number", "null"], "minimum": 0},
+        "wind_wave_height_m": {"type": ["number", "null"], "minimum": 0},
+        "wind_wave_direction_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "wind_wave_period_s": {"type": ["number", "null"], "minimum": 0},
+        "quality": {"$ref": "#/$defs/qualityFlag"}
+      }
+    },
+    "windHour": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "valid_at",
+        "speed_kmh",
+        "direction_deg",
+        "gust_kmh",
+        "quality"
+      ],
+      "properties": {
+        "source_id": {"type": "string"},
+        "valid_at": {"type": "string", "format": "date-time"},
+        "speed_kmh": {"type": ["number", "null"], "minimum": 0},
+        "direction_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "gust_kmh": {"type": ["number", "null"], "minimum": 0},
+        "quality": {"$ref": "#/$defs/qualityFlag"}
+      }
+    }
+  }
+}

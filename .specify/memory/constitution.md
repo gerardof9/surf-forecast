@@ -1,15 +1,14 @@
 <!--
 Sync Impact Report
-- Version change: (template placeholders) → 1.0.0
-- Modified principles: template PRINCIPLE_1–5 → I–XIV (full replacement with project principles)
-- Added sections: Precedence Criterion; Compliance Expectations
-- Removed sections: none (template slots filled; example-only comments removed)
+- Version change: 1.0.0 → 1.0.1
+- Modified principles: none renamed; full document translated Spanish → English (PATCH)
+- Added sections: none
+- Removed sections: none
 - Templates requiring updates:
-  - .specify/templates/plan-template.md ✅ updated (Constitution Check gates)
-  - .specify/templates/spec-template.md ✅ updated (constitution-aligned constraints)
-  - .specify/templates/tasks-template.md ✅ updated (pragmatic tests; no auth-by-default)
-  - .specify/templates/commands/*.md — N/A (directory absent)
-  - README.md / docs/quickstart.md — N/A (no project runtime docs yet)
+  - .specify/templates/plan-template.md ✅ already English
+  - .specify/templates/spec-template.md ✅ already English
+  - .specify/templates/tasks-template.md ✅ already English
+  - specs/001-la-paloma-surf-forecast/spec.md ✅ translated in same change set
 - Follow-up TODOs: none
 -->
 
@@ -17,209 +16,195 @@ Sync Impact Report
 
 ## Core Principles
 
-### I. Costo cero y uso personal
+### I. Zero cost and personal use
 
-El proyecto es exclusivamente personal y no comercial. Ninguna decisión
-puede introducir costos obligatorios ni depender de servicios de pago,
-suscripciones o licencias comerciales. Se priorizan fuentes de datos,
-herramientas y servicios gratuitos compatibles con este uso. Las
-limitaciones de las cuotas gratuitas DEBEN documentarse.
+The project is exclusively personal and non-commercial. No decision
+may introduce mandatory costs or depend on paid services, subscriptions,
+or commercial licenses. Free data sources, tools, and services compatible
+with this use are prioritized. Free-tier quota limits MUST be documented.
 
-**Rationale**: Un proyecto personal no debe acumular costos fijos ni
-bloquearse por licencias; la transparencia de cuotas evita fallos
-sorpresa.
+**Rationale**: A personal project must not accumulate fixed costs or get
+blocked by licenses; quota transparency avoids surprise failures.
 
-### II. Ejecución bajo demanda y sin infraestructura permanente
+### II. On-demand execution without permanent infrastructure
 
-El sistema se ejecuta únicamente cuando el usuario lo solicita. NO
-requiere servidores permanentemente activos, procesos en segundo plano,
-servicios autónomos ni infraestructura de ejecución continua. Puede
-consumir servicios externos gratuitos y reutilizar datos almacenados
-localmente. Cada ejecución DEBE poder realizarse de forma controlada y
-explicar qué datos utilizó.
+The system runs only when the user requests it. It MUST NOT require
+always-on servers, background processes, autonomous services, or continuous
+execution infrastructure. It may consume free external services and reuse
+locally stored data. Each run MUST be controllable and explain which data
+it used.
 
-**Rationale**: Sin siempre-encendido no hay costo de hosting ni
-mantenimiento de daemons; la trazabilidad por ejecución es el mínimo
-operativo.
+**Rationale**: No always-on means no hosting cost or daemon maintenance;
+per-run traceability is the operational minimum.
 
-### III. Flexibilidad y capacidad de corrección
+### III. Flexibility and correctability
 
-Los criterios de evaluación, ponderaciones, umbrales y fórmulas DEBEN
-ser configurables, versionados y reemplazables sin modificar
-innecesariamente el resto del sistema. Las observaciones reales pueden
-justificar cambios en los criterios. Ningún modelo, fórmula o umbral
-DEBE considerarse definitivo sin validación suficiente.
+Evaluation criteria, weights, thresholds, and formulas MUST be configurable,
+versioned, and replaceable without unnecessarily changing the rest of the
+system. Real observations may justify changes to criteria. No model,
+formula, or threshold MUST be treated as final without sufficient
+validation.
 
-**Rationale**: El surf es empírico; los criterios deben evolucionar con
-evidencia sin reescrituras totales.
+**Rationale**: Surf is empirical; criteria must evolve with evidence
+without full rewrites.
 
-### IV. Modularidad y simplicidad arquitectónica
+### IV. Modularity and architectural simplicity
 
-La obtención de datos, el almacenamiento, la evaluación de condiciones y
-la presentación de resultados DEBEN mantener responsabilidades
-separadas. Las fuentes de datos y los criterios de evaluación DEBEN
-poder sustituirse de forma independiente. NO se incorporará
-infraestructura, abstracciones ni dependencias que no aporten un
-beneficio concreto y justificado.
+Data acquisition, storage, condition evaluation, and result presentation
+MUST keep separate responsibilities. Data sources and evaluation criteria
+MUST be independently replaceable. Infrastructure, abstractions, or
+dependencies that do not provide a concrete, justified benefit MUST NOT
+be added.
 
-**Rationale**: Separar concerns permite cambiar fuentes o reglas sin
-arrastrar el resto; YAGNI evita complejidad prematura.
+**Rationale**: Separating concerns allows changing sources or rules without
+dragging the rest; YAGNI avoids premature complexity.
 
-### V. Honestidad sobre la incertidumbre
+### V. Honesty about uncertainty
 
-Los puntajes y niveles de confianza son indicadores de evaluación, no
-probabilidades de éxito, salvo que hayan sido calibrados y validados
-estadísticamente. Las discrepancias entre fuentes y modelos DEBEN
-hacerse visibles. La falta de datos, la incertidumbre y las limitaciones
-del pronóstico DEBEN comunicarse explícitamente; NO deben ocultarse
-mediante puntajes aparentemente precisos.
+Scores and confidence levels are evaluation indicators, not success
+probabilities, unless they have been statistically calibrated and
+validated. Discrepancies between sources and models MUST be made visible.
+Missing data, uncertainty, and forecast limitations MUST be communicated
+explicitly; they MUST NOT be hidden behind seemingly precise scores.
 
-**Rationale**: Una precisión falsa es más peligrosa que una incertidumbre
-declarada.
+**Rationale**: False precision is more dangerous than declared uncertainty.
 
-### VI. Informar, no decidir por el usuario
+### VI. Inform, do not decide for the user
 
-El sistema presenta datos, condiciones estimadas, evaluaciones,
-limitaciones y niveles de confianza para facilitar la decisión personal
-de viajar o surfear. NO debe presentar sus clasificaciones como
-garantías de que habrá olas surfables ni sustituir la evaluación del
-usuario sobre las condiciones reales y su seguridad.
+The system presents data, estimated conditions, evaluations, limitations,
+and confidence levels to support the user's personal decision to travel or
+surf. It MUST NOT present its classifications as guarantees that surfable
+waves will exist, nor replace the user's assessment of real conditions and
+safety.
 
-**Rationale**: La seguridad en el agua es responsabilidad del usuario; el
-sistema es un apoyo informativo.
+**Rationale**: In-water safety is the user's responsibility; the system is
+informational support.
 
-### VII. Validación contra la realidad
+### VII. Validation against reality
 
-La calidad del pronóstico DEBE evaluarse mediante observaciones reales
-de las condiciones de surf y, cuando sea posible, mediante comparación
-con pronósticos o referencias existentes. Las mejoras DEBEN
-demostrarse mediante comparaciones documentadas y criterios
-consistentes. NO se afirmará que una fuente, fórmula o modelo es
-superior sin evidencia suficiente.
+Forecast quality MUST be evaluated through real observations of surf
+conditions and, when possible, comparison with existing forecasts or
+references. Improvements MUST be demonstrated with documented comparisons
+and consistent criteria. A source, formula, or model MUST NOT be claimed
+superior without sufficient evidence.
 
-**Rationale**: Sin anclaje empírico, las “mejoras” son opinión.
+**Rationale**: Without empirical grounding, “improvements” are opinion.
 
-### VIII. No inventar ni confundir datos
+### VIII. Do not invent or confuse data
 
-Los nombres y unidades de las variables, las capacidades de las fuentes,
-las coordenadas, las orientaciones de los picos y cualquier otro dato
-técnico DEBEN verificarse antes de utilizarse. Los datos observados,
-los pronósticos de modelos y las estimaciones derivadas DEBEN
-distinguirse claramente. En particular, la altura de ola pronosticada
-en mar abierto NO debe presentarse como altura real de rompiente en la
-playa. Los datos desconocidos DEBEN identificarse como tales, no
-completarse mediante suposiciones silenciosas.
+Variable names and units, source capabilities, coordinates, peak
+orientations, and any other technical data MUST be verified before use.
+Observed data, model forecasts, and derived estimates MUST be clearly
+distinguished. In particular, forecast open-ocean wave height MUST NOT be
+presented as actual beach breaking height. Unknown data MUST be identified
+as such, not filled by silent assumptions.
 
-**Rationale**: Confundir offshore con rompiente o rellenar huecos
-silenciosos produce decisiones erróneas.
+**Rationale**: Confusing offshore height with breaking height, or silently
+filling gaps, produces bad decisions.
 
-### IX. Trazabilidad y reproducibilidad
+### IX. Traceability and reproducibility
 
-Cada evaluación DEBE poder relacionarse con los datos de entrada, las
-fuentes consultadas, la fecha y hora de referencia, las reglas aplicadas
-y la versión de los criterios utilizados. Cuando sea técnicamente
-viable, DEBEN conservarse los datos y resultados necesarios para
-reproducir y analizar evaluaciones anteriores.
+Each evaluation MUST be linkable to input data, sources consulted,
+reference date and time, rules applied, and the criteria version used.
+When technically feasible, the data and results needed to reproduce and
+analyze prior evaluations MUST be retained.
 
-**Rationale**: Sin trazabilidad no hay depuración ni aprendizaje de
-errores.
+**Rationale**: Without traceability there is no debugging or learning from
+errors.
 
-### X. Simplicidad primero y evolución basada en evidencia
+### X. Simplicity first and evidence-based evolution
 
-La primera versión DEBE implementar el camino más sencillo que permita
-generar evaluaciones útiles, transparentes y verificables. Se
-incorporarán nuevas fuentes, modelos, funcionalidades o componentes
-únicamente cuando exista una necesidad concreta y un beneficio esperado
-que justifique su costo, complejidad y mantenimiento.
+The first version MUST implement the simplest path that yields useful,
+transparent, and verifiable evaluations. New sources, models, features, or
+components are added only when there is a concrete need and an expected
+benefit that justifies their cost, complexity, and maintenance.
 
-**Rationale**: Empezar simple acelera el aprendizaje real; escalar solo
-con evidencia evita over-engineering.
+**Rationale**: Starting simple accelerates real learning; scaling only with
+evidence avoids over-engineering.
 
-### XI. Verificación pragmática y proporcional al riesgo
+### XI. Pragmatic verification proportional to risk
 
-La validación DEBE incluir situaciones reales de oleaje y viento, casos
-históricos cuando estén disponibles y revisión manual de los resultados.
-NO se exige una infraestructura compleja de pruebas ni integración
-continua. Se permiten pruebas automatizadas pequeñas y focalizadas
-cuando reduzcan significativamente el riesgo de errores o regresiones,
-especialmente en cálculos, umbrales y transformaciones de datos.
+Validation MUST include real swell and wind situations, historical cases
+when available, and manual review of results. Complex test infrastructure
+or continuous integration is NOT required. Small, focused automated tests
+are allowed when they significantly reduce error or regression risk,
+especially for calculations, thresholds, and data transforms.
 
-**Rationale**: El riesgo está en los números y transformaciones, no en
-montar un CI enterprise para un uso personal.
+**Rationale**: Risk lives in numbers and transforms, not in enterprise CI
+for personal use.
 
-### XII. Degradación elegante y transparencia ante fallos
+### XII. Graceful degradation and failure transparency
 
-La caída, indisponibilidad o falta de datos de una fuente NO debe
-provocar resultados engañosos ni el fallo innecesario de todo el
-sistema. Siempre que sea posible, se utilizarán los datos válidos
-disponibles y se indicará qué fuentes fallaron, qué información falta y
-cómo afecta esa limitación al resultado. La confianza NUNCA debe
-aumentar artificialmente por la ausencia de información.
+Source failure, unavailability, or missing data MUST NOT produce misleading
+results or unnecessary failure of the whole system. Whenever possible,
+available valid data MUST be used, and the system MUST indicate which
+sources failed, what information is missing, and how that limitation
+affects the result. Confidence MUST NEVER artificially increase because
+information is absent.
 
-**Rationale**: Fallar en silencio o inventar confianza ante huecos es
-peor que un resultado parcial explícito.
+**Rationale**: Silent failure or invented confidence when data is missing
+is worse than an explicit partial result.
 
-### XIII. Privacidad y alcance mínimo
+### XIII. Privacy and minimal scope
 
-El proyecto es de uso personal y NO requiere cuentas de usuario,
-autenticación multiusuario, pagos, telemetría ni recopilación de
-información personal. NO se incorporarán estas capacidades salvo que el
-alcance se modifique expresamente y se justifique su necesidad.
+The project is for personal use and MUST NOT require user accounts,
+multi-user authentication, payments, telemetry, or personal-data
+collection. These capabilities MUST NOT be added unless scope is expressly
+changed and justified.
 
-**Rationale**: Alcance mínimo = menos superficie de ataque, menos
-dependencias y alineación con el uso personal.
+**Rationale**: Minimal scope means less attack surface, fewer dependencies,
+and alignment with personal use.
 
-### XIV. Disciplina de implementación
+### XIV. Implementation discipline
 
-Las decisiones técnicas DEBEN ser coherentes con estos principios y con
-la especificación vigente. Ante una ambigüedad, se DEBE preferir la
-alternativa más sencilla, gratuita, verificable y reversible. Las
-decisiones que introduzcan costos, complejidad significativa, nuevas
-dependencias o cambios arquitectónicos relevantes DEBEN justificarse
-explícitamente antes de implementarse.
+Technical decisions MUST be consistent with these principles and the
+current specification. When ambiguous, the simplest free, verifiable, and
+reversible option MUST be preferred. Decisions that introduce costs,
+significant complexity, new dependencies, or material architectural
+changes MUST be justified explicitly before implementation.
 
-**Rationale**: La constitución solo funciona si las implementaciones la
-respetan de forma deliberada.
+**Rationale**: The constitution only works if implementations respect it
+deliberately.
 
 ## Precedence Criterion
 
-Estos principios orientan todas las decisiones del proyecto. Si una
-propuesta contradice alguno de ellos, la contradicción DEBE identificarse
-y resolverse explícitamente antes de continuar. Los cambios en estos
-principios DEBEN ser deliberados y documentados, no introducirse
-implícitamente como consecuencia de una decisión de implementación.
+These principles guide all project decisions. If a proposal contradicts
+any of them, the contradiction MUST be identified and resolved explicitly
+before continuing. Changes to these principles MUST be deliberate and
+documented, not introduced implicitly as a side effect of an
+implementation decision.
 
 ## Compliance Expectations
 
-- Todo plan (`plan.md`) DEBE pasar el Constitution Check antes de
-  investigación (Phase 0) y revalidarse tras el diseño (Phase 1).
-- Toda especificación DEBE respetar costo cero, honestidad sobre
-  incertidumbre, no inventar datos, y el rol informativo (no decisional).
-- Las tareas DEBEN favorecer modularidad, trazabilidad y verificación
-  pragmática; NO asumen cuentas, CI complejo ni infraestructura
-  permanente por defecto.
-- Violaciones justificadas se documentan en Complexity Tracking del plan
-  con alternativa más simple rechazada y motivo.
+- Every plan (`plan.md`) MUST pass the Constitution Check before research
+  (Phase 0) and re-check after design (Phase 1).
+- Every specification MUST respect zero cost, honesty about uncertainty,
+  no invented data, and the informational (non-decisional) role.
+- Tasks MUST favor modularity, traceability, and pragmatic verification;
+  they MUST NOT assume accounts, complex CI, or permanent infrastructure
+  by default.
+- Justified violations are documented in the plan's Complexity Tracking
+  with the simpler alternative rejected and the reason.
 
 ## Governance
 
-Esta constitución prevalece sobre hábitos informales, plantillas genéricas
-y preferencias ad hoc. Las enmiendas DEBEN:
+This constitution supersedes informal habits, generic templates, and ad
+hoc preferences. Amendments MUST:
 
-1. Documentar el cambio (principio afectado, motivo, impacto).
-2. Incrementar la versión según semver:
-   - MAJOR: eliminación o redefinición incompatible de principios.
-   - MINOR: nuevo principio/sección o expansión material de guía.
-   - PATCH: aclaraciones, redacción, typos, refinamientos no semánticos.
-3. Actualizar `Last Amended` a la fecha ISO del cambio.
-4. Propagar el impacto a plantillas y guías dependientes cuando cambien
-   restricciones o categorías de trabajo.
-5. Resolver conflictos con la especificación vigente de forma explícita
-   antes de implementar.
+1. Document the change (affected principle, reason, impact).
+2. Bump the version per semver:
+   - MAJOR: removal or incompatible redefinition of principles.
+   - MINOR: new principle/section or material expansion of guidance.
+   - PATCH: clarifications, wording, typos, non-semantic refinements.
+3. Update `Last Amended` to the ISO date of the change.
+4. Propagate impact to dependent templates and guides when constraints or
+   work categories change.
+5. Resolve conflicts with the current specification explicitly before
+   implementing.
 
-La revisión de cumplimiento ocurre en Constitution Check de cada plan y
-en revisiones manuales de resultados contra observaciones reales
-(Principios VII y XI). Complejidad, costos y nuevas dependencias
-requieren justificación escrita previa (Principio XIV).
+Compliance review occurs in each plan's Constitution Check and in manual
+reviews of results against real observations (Principles VII and XI).
+Complexity, costs, and new dependencies require prior written
+justification (Principle XIV).
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-12 | **Last Amended**: 2026-10-12
+**Version**: 1.0.1 | **Ratified**: 2026-10-12 | **Last Amended**: 2026-10-13
