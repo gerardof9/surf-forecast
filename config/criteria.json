@@ -1,0 +1,34 @@
+{
+  "criteria_version": "1.0.0",
+  "schema_version": "1.0.0",
+  "effective_from": "2026-10-13T00:00:00Z",
+  "point_k": 0.5,
+  "range_k_low": 0.5,
+  "range_k_high": 0.7,
+  "surfable_threshold_m": 0.5,
+  "size_bands": [
+    {"grade": "no_surfable_waves", "minimum_m": 0.0, "maximum_m": 0.5},
+    {"grade": "small_but_surfable", "minimum_m": 0.5, "maximum_m": 0.8},
+    {"grade": "fair", "minimum_m": 0.8, "maximum_m": 1.2},
+    {"grade": "good", "minimum_m": 1.2, "maximum_m": 1.8},
+    {"grade": "very_good", "minimum_m": 1.8, "maximum_m": null}
+  ],
+  "wind_speed_bands": [
+    {"intensity": "light", "minimum_kmh": 0, "maximum_kmh": 10},
+    {"intensity": "moderate", "minimum_kmh": 10, "maximum_kmh": 20},
+    {"intensity": "strong", "minimum_kmh": 20, "maximum_kmh": 35},
+    {"intensity": "very_strong", "minimum_kmh": 35, "maximum_kmh": null}
+  ],
+  "max_quality_downgrade_steps": 1,
+  "quality_downgrade_min_unfavorable_factors": 2,
+  "wind_unfavorable_classes": ["onshore", "onshore_side"],
+  "wind_unfavorable_intensities": ["strong", "very_strong"],
+  "swell_trend_min_samples": 3,
+  "swell_trend_relative_change": 0.10,
+  "swell_trend_absolute_change_m": 0.1,
+  "minimum_surfable_grade": "small_but_surfable",
+  "analysis_start_local": "06:00",
+  "analysis_end_local": "20:00",
+  "minimum_window_minutes": 120,
+  "cache_fresh_minutes": 180
+}

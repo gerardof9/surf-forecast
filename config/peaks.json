@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0.0",
+  "peaks": [
+    {
+      "peak_id": "la_aguada",
+      "name": "La Aguada",
+      "aliases": ["Arachania"],
+      "zone_id": "la_paloma",
+      "latitude": -34.6435,
+      "longitude": -54.1546,
+      "orientation_deg": 90,
+      "ideal_swell_sectors": [
+        {"start_deg": 67.5, "end_deg": 112.5, "label": "E"},
+        {"start_deg": 112.5, "end_deg": 135, "label": "ESE"}
+      ],
+      "acceptable_swell_sectors": [
+        {"start_deg": 135, "end_deg": 180, "label": "SE-SSE"}
+      ],
+      "blocked_swell_sectors": [
+        {"start_deg": 225, "end_deg": 315, "label": "W"}
+      ],
+      "ideal_period_s": {"minimum": 8, "maximum": 12},
+      "minimum_period_s": 7,
+      "offshore_wind_sectors": [
+        {"start_deg": 202.5, "end_deg": 315, "label": "SW-W-WNW"}
+      ],
+      "bottom_types": ["sand"],
+      "status": "provisional",
+      "estimated_fields": ["acceptable_swell_sectors", "blocked_swell_sectors"],
+      "profile_version": "1.0.0",
+      "schema_version": "1.0.0",
+      "updated_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "peak_id": "zanja_honda",
+      "name": "Zanja Honda",
+      "aliases": ["Corumbá"],
+      "zone_id": "la_paloma",
+      "latitude": -34.6606,
+      "longitude": -54.1859,
+      "orientation_deg": 180,
+      "ideal_swell_sectors": [
+        {"start_deg": 157.5, "end_deg": 202.5, "label": "S"},
+        {"start_deg": 135, "end_deg": 157.5, "label": "SE"}
+      ],
+      "acceptable_swell_sectors": [
+        {"start_deg": 90, "end_deg": 135, "label": "E-ESE"}
+      ],
+      "blocked_swell_sectors": [
+        {"start_deg": 315, "end_deg": 45, "label": "N"}
+      ],
+      "ideal_period_s": {"minimum": 9, "maximum": 13},
+      "minimum_period_s": 8,
+      "offshore_wind_sectors": [
+        {"start_deg": 292.5, "end_deg": 22.5, "label": "NW-N"},
+        {"start_deg": 247.5, "end_deg": 292.5, "label": "W"}
+      ],
+      "bottom_types": ["sand_and_rock"],
+      "status": "provisional",
+      "estimated_fields": ["acceptable_swell_sectors"],
+      "profile_version": "1.0.0",
+      "schema_version": "1.0.0",
+      "updated_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "peak_id": "los_botes",
+      "name": "Los Botes",
+      "aliases": [],
+      "zone_id": "la_paloma",
+      "latitude": -34.6618,
+      "longitude": -54.1791,
+      "orientation_deg": 180,
+      "ideal_swell_sectors": [
+        {"start_deg": 157.5, "end_deg": 202.5, "label": "S"},
+        {"start_deg": 202.5, "end_deg": 225, "label": "SSW"}
+      ],
+      "acceptable_swell_sectors": [],
+      "blocked_swell_sectors": [
+        {"start_deg": 0, "end_deg": 90, "label": "N-E"}
+      ],
+      "ideal_period_s": {"minimum": 10, "maximum": 14},
+      "minimum_period_s": 9,
+      "offshore_wind_sectors": [
+        {"start_deg": 337.5, "end_deg": 90, "label": "N-NE-ENE"}
+      ],
+      "bottom_types": ["sand_and_rock"],
+      "status": "provisional",
+      "estimated_fields": ["blocked_swell_sectors"],
+      "profile_version": "1.0.0",
+      "schema_version": "1.0.0",
+      "updated_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "peak_id": "la_serena",
+      "name": "La Serena",
+      "aliases": [],
+      "zone_id": "la_paloma",
+      "latitude": -34.6612,
+      "longitude": -54.1986,
+      "orientation_deg": 180,
+      "ideal_swell_sectors": [
+        {"start_deg": 157.5, "end_deg": 202.5, "label": "S"},
+        {"start_deg": 135, "end_deg": 157.5, "label": "SE"}
+      ],
+      "acceptable_swell_sectors": [
+        {"start_deg": 202.5, "end_deg": 225, "label": "SSW"}
+      ],
+      "blocked_swell_sectors": [],
+      "ideal_period_s": {"minimum": 9, "maximum": 13},
+      "minimum_period_s": 8,
+      "offshore_wind_sectors": [
+        {"start_deg": 337.5, "end_deg": 90, "label": "N-NE-ENE"}
+      ],
+      "bottom_types": ["sand_and_rock"],
+      "status": "provisional",
+      "estimated_fields": ["acceptable_swell_sectors"],
+      "profile_version": "1.0.0",
+      "schema_version": "1.0.0",
+      "updated_at": "2026-10-13T00:00:00Z"
+    },
+    {
+      "peak_id": "la_balconada",
+      "name": "La Balconada",
+      "aliases": [],
+      "zone_id": "la_paloma",
+      "latitude": -34.6653,
+      "longitude": -54.1630,
+      "orientation_deg": 180,
+      "ideal_swell_sectors": [
+        {"start_deg": 157.5, "end_deg": 202.5, "label": "S"},
+        {"start_deg": 135, "end_deg": 157.5, "label": "SE"}
+      ],
+      "acceptable_swell_sectors": [
+        {"start_deg": 202.5, "end_deg": 225, "label": "SSW"}
+      ],
+      "blocked_swell_sectors": [],
+      "ideal_period_s": {"minimum": 9, "maximum": 13},
+      "minimum_period_s": 8,
+      "offshore_wind_sectors": [
+        {"start_deg": 337.5, "end_deg": 90, "label": "N-NE-ENE"}
+      ],
+      "bottom_types": ["sand_and_rock"],
+      "status": "provisional",
+      "estimated_fields": ["acceptable_swell_sectors"],
+      "profile_version": "1.0.0",
+      "schema_version": "1.0.0",
+      "updated_at": "2026-10-13T00:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "peaks": [
+    {
+      "peak_id": "incomplete_peak",
+      "name": "Incompleto",
+      "zone_id": "la_paloma",
+      "status": "calibrated",
+      "profile_version": "1.0.0",
+      "schema_version": "1.0.0",
+      "updated_at": "2026-10-13T00:00:00Z",
+      "estimated_fields": []
+    }
+  ]
+}
