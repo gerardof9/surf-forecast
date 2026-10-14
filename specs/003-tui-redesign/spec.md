@@ -89,6 +89,7 @@ Inspirational only for dense monospaced charting and directional glyphs. Explici
 - Q: Should peak 1–5 scores and peak analysis text also be part of the shared machine-readable presentation? → A: Yes for both (Option A): peak scores and peak analysis (when present) are included in the shared presentation consumed by TUI, CLI/JSON, and snapshots.
 - Q: On first open of View B, should `DETALLES TÉCNICOS` start collapsed or visible? → A: Collapsed by default; expand/collapse with `D` (Option A).
 - Q: How dense should View B’s hourly evolution be relative to analysis-window hours? → A: Sampled times only (Option A), e.g. morning/midday/afternoon style as in the mock; sampling rule MUST be documented and MUST NOT invent a best window. Full hourly detail remains available via engine/presentation data for verification even if the TUI samples for display.
+- Q: Confirm plan pending decisions (score map, captions, sample bands, section title)? → A: Confirmed as suggested (2026-10-14): ordinal `SurfGrade`→1.0…5.0 whole points; day = best resolved peak; captions per `data-model.md`; bands 06:00–10:59 / 11:00–14:59 / 15:00–20:00 UYT; section title `PICOS DEL DÍA`. Rating is display encoding of engine grades, not a new meteorology formula; narrative remains templates only (no LLM); TUI does not reimplement classification rules.
 
 ## User Scenarios & Testing *(mandatory)*
 

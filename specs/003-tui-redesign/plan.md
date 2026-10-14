@@ -47,11 +47,22 @@ Replace the current three-pane comparator TUI with a **daily surf report** (View
 - [x] **XI. Pragmatic verification**: Focused transforms tests + manual checklist; no enterprise CI
 - [x] **XII. Graceful degradation**: Existing degraded/stored-only paths retained in UI status
 - [x] **XIII. Privacy / minimal scope**: No accounts/telemetry/preferences persistence
-- [x] **XIV. Implementation discipline**: Open functional decisions listed; Textual retained with justification below
+- [x] **XIV. Implementation discipline**: Presentation policies confirmed; Textual retained with justification below
 
 ### Post-design re-check
 
-Phase 1 artifacts (`research.md`, `data-model.md`, `contracts/*`, `quickstart.md`) keep ratings/narratives out of widgets, preserve engine contracts, and document pending confirmations before coding arbitrary score weights.
+Phase 1 artifacts keep ratings/narratives out of widgets and preserve engine contracts. Pending presentation-policy items were **confirmed 2026-10-14** (see below and `research.md`).
+
+## Pre-/tasks gate review (stakeholder)
+
+| # | Criterion | Verdict |
+|---|-----------|---------|
+| 1 | Global 1–5 must be **defined and justified**, not an opaque invented formula | **Pass**. Score = ordinal encoding of existing engine `SurfGrade` (`no_surfable_waves`→1.0 … `very_good`→5.0). Day rating = score of best resolved peak via existing `GRADE_ORDER` / `best_peak_ids`. Does **not** recompute size/quality/confidence. Method `best_resolved_grade_map_v1`. Half-steps unused in v1. |
+| 2 | Narrative from **available structured data**; no LLM / external generative service | **Pass**. Fixed Spanish templates in `domain/narrative.py`; omit or limitation when facts missing. Explicitly forbids LLM/paid NLP APIs. |
+| 3 | TUI **reuses** engine classifications/calculations; no second rule engine in UI | **Pass**. Widgets only render `ForecastPresentation` fields. Grades, windows, confidence stay in `evaluation.py`. Helpers map/display only. |
+| — | Mockups | **Pass** for `mock2.png` hierarchy; `mock1.jpg` non-binding. |
+
+**Ready for `/speckit-tasks`** after this confirmation.
 
 ## Deliberate Presentation Complexity
 
@@ -94,14 +105,12 @@ ForecastPresentation.payload  schema 1.1.0
 | **Help** | Keys, honesty, FR-017 meanings, config path for profiles JSON |
 | **App** | Workers, refresh/stored-only, screen push/pop |
 
-## Pending functional decisions (confirm before dependent tasks)
+## Confirmed functional decisions (2026-10-14)
 
-Do **not** invent silent alternatives in code:
-
-1. Confirm grade→score table in `research.md` (proposed 1.0…5.0 whole points).
-2. Confirm optional captions per score (`data-model.md`).
-3. Confirm evolution band edges (proposed 06–11 / 11–15 / 15–20).
-4. Pick canonical section title: `PICOS DEL DÍA` vs `SPOTS EVALUADOS`.
+1. **Grade→score**: `no_surfable_waves` 1.0 · `small_but_surfable` 2.0 · `fair` 3.0 · `good` 4.0 · `very_good` 5.0; day = best resolved peak; method `best_resolved_grade_map_v1`.
+2. **Captions**: as listed in `data-model.md` (optional FR-008 accompaniment).
+3. **Evolution bands**: first slot in `06:00–10:59`, `11:00–14:59`, `15:00–20:00` UYT; omit empty; best window from engine only.
+4. **Section title**: `PICOS DEL DÍA`.
 
 ## Project Structure
 
@@ -150,16 +159,15 @@ src/surf_forecast/
 
 ## Implementation order (small, verifiable slices)
 
-1. **Confirm open decisions** (score table, bands, title, captions).
-2. **Label map + schema 1.1.0 fields** in `presentation.py` (condition_label, display_name) with focused checks.
-3. **Day/peak rating helpers** + wire into payload; CLI smoke print.
-4. **Narrative templates** (day then peak) with omission rules + checks.
-5. **Evolution sampling** helper + payload `evolution_samples`.
-6. **Dual timestamps** in payload/header helpers.
-7. **View A TUI** (days, analysis, rating, cards, legend, focus/bindings).
-8. **View B TUI** (detail, samples, best window, peak analysis, collapsed technicals).
-9. **Remove ProfileScreen**; update Help; keep stored-only `o`.
-10. **Manual quickstart** matrix + ensure engine fixture replay still green.
+1. **Label map + schema 1.1.0 fields** in `presentation.py` (condition_label, display_name) with focused checks.
+2. **Day/peak rating helpers** + wire into payload; CLI smoke print.
+3. **Narrative templates** (day then peak) with omission rules + checks.
+4. **Evolution sampling** helper + payload `evolution_samples`.
+5. **Dual timestamps** in payload/header helpers.
+6. **View A TUI** (days, analysis, rating, cards, legend, focus/bindings).
+7. **View B TUI** (detail, samples, best window, peak analysis, collapsed technicals).
+8. **Remove ProfileScreen**; update Help; keep stored-only `o`.
+9. **Manual quickstart** matrix + ensure engine fixture replay still green.
 
 ## Files affected (expected)
 
@@ -187,7 +195,7 @@ src/surf_forecast/
 
 | Risk | Mitigation |
 |------|------------|
-| Arbitrary score invents “skill” | Confirm table; method id in payload; honesty copy in Help |
+| Score misread as calibrated skill | Documented ordinal map + method id + Help honesty; never recompute grades in TUI |
 | Narrative invents weather | Templates + unit checks on missing-fact fixtures |
 | Schema break for old snapshots | Additive 1.1.0; keep engine replay on 1.0.0 |
 | mock2 vs terminal width | Responsive stack; scroll analysis |
@@ -209,4 +217,4 @@ src/surf_forecast/
 | Presentation contract | [contracts/presentation.md](./contracts/presentation.md) |
 | Quickstart | [quickstart.md](./quickstart.md) |
 
-**Next command**: `/speckit-tasks` (after reviewing this plan and confirming pending decisions). **Do not implement in this phase.**
+**Next command**: `/speckit-tasks`. **Do not implement in this phase.**

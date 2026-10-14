@@ -51,7 +51,7 @@ All query actions call existing application services (`run_forecast` modes).
 - Meteorological update/age distinct from query execution time
 - `day_analysis.text` (scrollable; no silent truncation)
 - `day_rating` or `Sin valoración` + reason
-- Neutral section `PICOS DEL DÍA` (or confirmed synonym); never “recomendados”
+- Neutral section `PICOS DEL DÍA`; never “recomendados”
 - Cards: display_name, FR-017 label, size range m, period s, wind, peak_rating when present, best_of_day marker
 - Compact day list with focus on load
 

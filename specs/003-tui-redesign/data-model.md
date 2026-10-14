@@ -39,7 +39,7 @@ Extends `001` presentation with:
 
 | Field | Type | Rules |
 |-------|------|-------|
-| `score` | number | ∈ {1.0, 1.5, …, 5.0}; v1 proposed map uses whole points only |
+| `score` | number | ∈ {1.0, 1.5, …, 5.0}; v1 confirmed map uses whole points 1.0–5.0 from `SurfGrade` only |
 | `source_peak_id` | string | Best resolved peak used |
 | `caption` | string/null | Optional qualitative caption consistent with score |
 | `method` | string | e.g. `best_resolved_grade_map_v1` |
@@ -89,7 +89,7 @@ Same shape as `DayRating` but `source_peak_id` is self.
 | `condition_label` | string/null | FR-017 or state label |
 | `incomplete_or_uncertain` | bool | |
 
-**Proposed band rule** (confirm before implement): first slot in `[06:00,11:00)`, `[11:00,15:00)`, `[15:00,20:00]` within analysis window.
+**Confirmed band rule**: first slot in `[06:00,11:00)`, `[11:00,15:00)`, `[15:00,20:00]` America/Montevideo within the analysis window.
 
 ## Label map (FR-017)
 
@@ -105,7 +105,7 @@ Same shape as `DayRating` but `source_peak_id` is self.
 
 Do not show `resolved` as a primary user condition; prefer condition label when present.
 
-## Proposed score captions (optional; confirm)
+## Confirmed score captions (optional FR-008)
 
 | Score | Caption |
 |------:|---------|
@@ -114,6 +114,8 @@ Do not show `resolved` as a primary user condition; prefer condition label when 
 | 3.0 | Condiciones surfeables, con limitaciones |
 | 2.0 | Oportunidad limitada / variable |
 | 1.0 | Pocas olas en el mejor pico evaluado |
+
+Canonical View A spot section title: **`PICOS DEL DÍA`**.
 
 ## Relationships
 

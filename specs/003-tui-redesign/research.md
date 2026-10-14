@@ -50,33 +50,32 @@
 - **Rationale**: Spec clarify; no engine rewrite.
 - **Alternatives considered**: Rename enums (rejected: breaks snapshots/engine).
 
-## Decision: Day/peak 1–5 from resolved grade (candidate — confirm before implement)
+## Decision: Day/peak 1–5 from resolved grade — CONFIRMED 2026-10-14
 
-- **Decision (proposed default)**: Map resolved `SurfGrade` → score; day score = score of best resolved peak (existing `GRADE_ORDER` / `best_peak_ids` semantics). Non-resolved → no numeric score / `Sin valoración` for the day when none resolve.
+- **Decision**: Map resolved `SurfGrade` → score; day score = score of the best resolved peak using existing engine ranking (`GRADE_ORDER`, `best_peak_ids` / `highlighted`). Non-resolved → no numeric score; day shows `Sin valoración` when no resolved peak exists.
 
-| Grade | Score |
-|-------|------:|
+| Grade (engine, unchanged) | Score |
+|---------------------------|------:|
 | `no_surfable_waves` | 1.0 |
 | `small_but_surfable` | 2.0 |
 | `fair` | 3.0 |
 | `good` | 4.0 |
 | `very_good` | 5.0 |
 
-- **Rationale**: Deterministic, mirrors engine ranking already used for `highlighted` / `best_peak_ids`, uses full 1–5 span, no arbitrary multi-peak blend (clarify Option A). Half-steps unused in v1 unless a later confirmed within-band rule is added.
-- **Alternatives considered**: Multi-peak composite (rejected in clarify); include uncertain peaks (rejected); invent continuous regression on Hs (rejected: arbitrary vs engine grades).
-- **PENDING CONFIRMATION**: Stakeholder must accept this table (or supply another documented table) before coding. Plan MUST NOT invent alternate weights silently.
+- **Justification (not an invented skill formula)**: This is an **ordinal display encoding** of the engine’s existing `SurfGrade`, not a new weighted meteorology model. Size bands, quality downgrades, uncertainty, and incomplete states remain solely in `evaluation.py`. The presentation layer MUST NOT re-derive grades from Hs/wind/period. Half-steps (1.5, 2.5, …) are unused in v1; the scale still admits 0.5 increments for a future documented refinement without requiring them now. Method id: `best_resolved_grade_map_v1`.
+- **Rationale**: Deterministic; aligned with clarify (best-peak only; resolved only); spans 1–5 without multi-peak blending or ad-hoc Hs regression.
+- **Alternatives considered**: Multi-peak composite (rejected in clarify); include uncertain peaks (rejected); continuous regression on Hs (rejected: invents a second classifier).
 
-## Decision: Template narrative (no generative model)
+## Decision: Template narrative (no generative model) — CONFIRMED
 
-- **Decision**: Spanish sentences from fixed templates filled only when facts exist: swell trend label, dominant direction/period if present, wind rotation/intensity summary, best-peak exposure notes from profiles, size range text, explicit limitation clauses for missing pieces / single source / shared grid / provisional profiles.
-- **Rationale**: Spec + user guidance; Principles V/VIII.
-- **Alternatives considered**: LLM (cost/invention risk); hand-written static blurbs (not data-linked).
+- **Decision**: Spanish sentences from **fixed templates** filled only when facts exist: swell trend label, dominant direction/period if present, wind rotation/intensity summary, best-peak exposure notes from profiles, size range text, explicit limitation clauses for missing pieces / single source / shared grid / provisional profiles. **No LLM, no paid NLP API, no external text-generation service.**
+- **Rationale**: Spec + user guidance; Principles V/VIII/I.
+- **Alternatives considered**: LLM/external generative API (rejected: cost, invention risk, unnecessary dependency); hand-written static blurbs (rejected: not data-linked).
 
-## Decision: Sampled evolution display
+## Decision: Sampled evolution display — CONFIRMED 2026-10-14
 
-- **Decision (proposed default)**: View B shows up to three rows — first available slot in bands `06:00–10:59`, `11:00–14:59`, `15:00–20:00` America/Montevideo within the analysis window. Omit empty bands. Best window remains engine field, not inferred from samples.
+- **Decision**: View B shows up to three rows — first available slot in bands `06:00–10:59`, `11:00–14:59`, `15:00–20:00` America/Montevideo within the analysis window. Omit empty bands. Best window remains the **engine** field (`best_window`), never inferred from samples.
 - **Rationale**: Clarify Option A + mock density; full `reference_slots` stay in payload for verification.
-- **PENDING CONFIRMATION**: Exact band edges may be adjusted in tasks if stakeholder prefers different clocks; must remain documented.
 
 ## Decision: Technical details collapsed; profiles out; stored-only stays
 
@@ -94,11 +93,18 @@
 - **Decision**: (1) Pure-Python deterministic checks for grade→score, narrative omission rules, sampling bands, label map. (2) Manual quickstart checklist for View A/B, keyboard, narrow/wide, incomplete/uncertain/provisional/window-completed. (3) Existing engine fixture replay must still pass.
 - **Rationale**: Principle XI; no CI mandate.
 
-## Open decisions (must resolve before implementation tasks that depend on them)
+## Confirmed presentation-policy decisions (2026-10-14)
 
-1. Confirm grade→1.0–5.0 table above (or replace with stakeholder table).
-2. Confirm qualitative captions per score (optional FR-008) — proposed short Spanish phrases in `data-model.md`.
-3. Confirm evolution sample band edges.
-4. Confirm canonical section title string: `PICOS DEL DÍA` vs `SPOTS EVALUADOS` (both allowed; pick one for UI copy consistency).
+1. Grade→score table above — **confirmed**.
+2. Qualitative captions per score — **confirmed** as in `data-model.md`.
+3. Evolution sample bands `06:00–10:59` / `11:00–14:59` / `15:00–20:00` — **confirmed**.
+4. Canonical spot-section title — **`PICOS DEL DÍA`** (not “recomendados”; `SPOTS EVALUADOS` rejected for consistency).
 
-These are **not** engine changes; they are presentation-policy confirmations required by the user’s plan constraints.
+## Pre-/tasks gate (stakeholder checklist)
+
+| Criterion | Plan status |
+|-----------|-------------|
+| 1. Global 1–5 defined and justified (not an invented opaque formula) | **Pass** — ordinal map of existing `SurfGrade`; day = best resolved peak |
+| 2. Narrative from available data; no LLM/external generative service | **Pass** — templates only |
+| 3. TUI reuses engine classifications; no second rule engine in widgets | **Pass** — rating/narrative in domain helpers fed by evaluation outputs; TUI renders payload only |
+| Mock hierarchy (`mock2.png`) | **Pass** — View A/B composition in contracts/tui.md |

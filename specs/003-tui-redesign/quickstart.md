@@ -7,7 +7,7 @@
 ## Prerequisites
 
 - Python 3.12+ venv with project deps (`textual`)
-- Confirm open decisions in `research.md` (grade→score table, sample bands, section title) before treating UI copy as final
+- Presentation policies in `research.md` / `data-model.md` are confirmed (grade→score, bands, `PICOS DEL DÍA`, captions)
 
 ## Run TUI
 
