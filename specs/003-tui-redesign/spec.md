@@ -21,7 +21,7 @@
 **In scope**:
 
 - Two primary views: **Daily summary (View A)** and **Peak detail (View B)**, following the binding conceptual composition in `mock2.png`.
-- Interpreted Spanish presentation of existing forecast results (day narrative, optional peak narrative, global and per-peak ratings on the documented 1–5 map, comparable spot cards, hourly evolution, optional technical details).
+- Interpreted Spanish presentation of existing forecast results (day narrative, peak narrative when facts suffice, global and per-peak ratings on the documented 1–5 map, comparable spot cards, hourly evolution, optional technical details)—shared with CLI/JSON/snapshots, not TUI-only.
 - Explicit condition vocabulary mapping and an on-screen condition legend (labels always accompany color).
 - Keyboard navigation, help footer, responsive layout for different terminal widths.
 - Traceability and honesty about uncertainty retained (technical details secondary, not removed).
@@ -53,7 +53,7 @@ Reference composition for this feature:
 
 - Header: `SURF · LA PALOMA`, horizon (`Pronóstico de hoy + 4 días` / equivalent), meteorological update timestamp in UYT, discrete data-state chip (e.g. `Datos disponibles`).
 - Left rail: compact `DÍAS` list (weekday + date), optional per-day rating chip, selected-day highlight, and a compact **Estado de condiciones** legend aligned with FR-017.
-- Main column: selected-day title; `ANÁLISIS DEL DÍA`; `VALORACIÓN DEL DÍA` (stars + mandatory numeric score + short qualitative caption); `SPOTS RECOMENDADOS` as comparable cards (name, FR-017 tag, size m, period s, wind, per-peak 1–5 when resolved).
+- Main column: selected-day title; `ANÁLISIS DEL DÍA`; `VALORACIÓN DEL DÍA` (stars + mandatory numeric score + short qualitative caption); `PICOS DEL DÍA` / `SPOTS EVALUADOS` (neutral; not “recomendados”) as comparable cards (name, FR-017 tag, size m, period s, wind, per-peak 1–5 when resolved).
 - Optional right rail on wide terminals: legend / how-to-read metrics; on narrow terminals this content moves to Help or a compact footer/legend strip—MUST NOT be required for answering the three primary questions.
 - Footer: contextual key hints (`↑↓` day, `←→` spot, `Enter` detail, `R` refresh, `?` help, `Q` quit; plus documented stored-only and other secondary keys).
 
@@ -61,9 +61,9 @@ Reference composition for this feature:
 
 - Header/breadcrumb: peak name, selected day, profile orientation/status when available (e.g. provisional), back affordance.
 - Summary: FR-017 condition, estimated size range, period, wind/swell summary, peak 1–5 rating when resolved, confidence.
-- Temporal block: compact hourly (or analysis-window) evolution; `MEJOR VENTANA ESTIMADA` only when engine-supported.
-- Optional short **peak analysis** narrative built from the same rule family as the day analysis (spot-scoped; no invented meteorology).
-- Collapsible / secondary `DETALLES TÉCNICOS` (source/model, Hs vs derived size, ages, shared-cell warning, snapshot id). Technical content MUST NOT dominate the default reading path.
+- Temporal block: compact **sampled** analysis-window evolution (documented morning/midday/afternoon-style rows); `MEJOR VENTANA ESTIMADA` only when engine-supported.
+- Short **peak analysis** narrative when peak facts suffice (same rule family as day analysis; spot-scoped; no invented meteorology); otherwise omitted/limitation.
+- Collapsible `DETALLES TÉCNICOS` starting collapsed (toggle `D`): source/model, Hs vs derived size, ages, shared-cell warning, snapshot id. Technical content MUST NOT dominate the default reading path.
 
 Pixel-perfect reproduction is not required; information hierarchy, Spanish copy patterns, dual-time honesty, and keyboard paths are.
 
@@ -84,6 +84,11 @@ Inspirational only for dense monospaced charting and directional glyphs. Explici
 - Q: How should View A order spot cards? → A: Engine day ranking (Option A): condition grade rank plus the engine’s existing tie-breaks, best resolved first—aligned with the best-of-day marker and day rating source when present.
 - Q: On View A after a forecast loads, where should keyboard focus start? → A: Day list on the current selected day (Option A); spots reached afterward via horizontal navigation or focus cycling.
 - Q: How should conceptual mockups and the “daily surf report” framing affect the spec? → A: Adopt product framing as a daily surf report (not only a comparator). Treat `mock2.png` as the binding conceptual layout for Views A/B; treat `mock1.jpg` as non-binding density inspiration. Mock numeric/content values are illustrative only. Keep narrative generation on structured facts + explicit rules (no invented meteorology). Keep meteorological data age distinct from app query time—even when an older update timestamp appears on a later local calendar day. Allow the same documented 1–5 mapping used for the day rating to label each resolved peak on cards/detail. Allow an optional short peak-scoped analysis in View B under the same honesty rules as the day analysis.
+- Q: How should View A label the spot-card section titled roughly “SPOTS RECOMENDADOS” in the mock? → A: Neutral title such as `PICOS DEL DÍA` or `SPOTS EVALUADOS` (Option B); no “recomendado” copy. Keep the “best of day” marker without advice-to-surf wording.
+- Q: When should View B show the optional peak analysis narrative in the first delivery? → A: Show when sufficient peak-scoped facts exist for at least one evidence-bound sentence; otherwise omit or show a brief limitation (Option A).
+- Q: Should peak 1–5 scores and peak analysis text also be part of the shared machine-readable presentation? → A: Yes for both (Option A): peak scores and peak analysis (when present) are included in the shared presentation consumed by TUI, CLI/JSON, and snapshots.
+- Q: On first open of View B, should `DETALLES TÉCNICOS` start collapsed or visible? → A: Collapsed by default; expand/collapse with `D` (Option A).
+- Q: How dense should View B’s hourly evolution be relative to analysis-window hours? → A: Sampled times only (Option A), e.g. morning/midday/afternoon style as in the mock; sampling rule MUST be documented and MUST NOT invent a best window. Full hourly detail remains available via engine/presentation data for verification even if the TUI samples for display.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -140,9 +145,9 @@ As a surfer, I want peak detail with hourly evolution and a best window only whe
 
 1. **Given** View B, **When** it opens, **Then** the header shows peak name, selected day/date, analysis window `06:00–20:00` UYT (or equivalent), overall condition, and estimated size; profile orientation/status may appear when available.
 2. **Given** available peak inputs, **When** conditions section renders, **Then** it shows surfable size range, swell direction/period, wind direction/intensity, wind evolution when available, confidence, peak 1–5 rating when resolved, and a brief limitation explanation.
-3. **Given** hourly slots in the analysis window, **When** hourly evolution renders, **Then** each slot shows local time, estimated surfable size, wind (direction, intensity, relative evaluation), estimated condition, and uncertainty/incomplete markers when applicable, in a compact readable form (metric units: m, s, km/h—not ft/mph unless the product later changes units).
-4. **Given** the engine identified a best window meeting the project’s minimum duration with sufficient hourly support, **When** View B renders, **Then** `MEJOR VENTANA ESTIMADA` appears with that window; otherwise the UI explicitly states that no clear window exists and does not invent one.
-5. **Given** sufficient peak-scoped facts, **When** optional peak analysis is shown, **Then** it is a short Spanish narrative from the same rule family as the day analysis, scoped to that peak, and MUST NOT invent unsupported meteorology; if insufficient, omit or state the limitation.
+3. **Given** hourly slots in the analysis window, **When** View B’s evolution section renders, **Then** it shows a **documented sample** of times (e.g. morning / midday / afternoon within 06:00–20:00 UYT), each with local time, estimated surfable size, wind (direction, intensity, relative evaluation), estimated condition, and uncertainty/incomplete markers when applicable, in compact metric form (m, s, km/h). Sampling MUST NOT invent missing hours or a best window.
+4. **Given** the engine identified a best window meeting the project’s minimum duration with sufficient hourly support, **When** View B renders, **Then** `MEJOR VENTANA ESTIMADA` appears with that engine-backed window even if sample rows omit some in-between hours; otherwise the UI explicitly states that no clear window exists and does not invent one.
+5. **Given** sufficient peak-scoped facts for at least one evidence-bound sentence, **When** View B renders, **Then** a short peak analysis narrative is shown from the same rule family as the day analysis, scoped to that peak, and MUST NOT invent unsupported meteorology; **Given** insufficient peak facts, **Then** the peak-analysis block is omitted or replaced by a brief limitation (not fabricated prose).
 6. **Given** today after the analysis window ended, **When** View B (or View A for today) renders, **Then** the existing rule applies: analysis window completed; no new surf best window for today.
 
 ---
@@ -157,8 +162,8 @@ As a careful user, I want technical provenance available inside peak detail so I
 
 **Acceptance Scenarios**:
 
-1. **Given** View B with technical section collapsed, **When** the user views the screen, **Then** technical identifiers/logs do not dominate the primary content.
-2. **Given** View B, **When** the user toggles details (`D` or documented equivalent), **Then** `DETALLES TÉCNICOS` shows source/model identity, update time and data age, raw Hs and derived estimated size, conversion factor and uncertainty range, peak-profile and criteria versions, confidence/limitation reasons, snapshot id, and shared regional-cell warnings when relevant.
+1. **Given** View B just opened, **When** the user views the screen before toggling details, **Then** `DETALLES TÉCNICOS` starts collapsed and technical identifiers/logs do not dominate the primary content.
+2. **Given** View B, **When** the user toggles details (`D` or documented equivalent), **Then** `DETALLES TÉCNICOS` expands or collapses accordingly; when expanded it shows source/model identity, update time and data age, raw Hs and derived estimated size, conversion factor and uncertainty range, peak-profile and criteria versions, confidence/limitation reasons, snapshot id, and shared regional-cell warnings when relevant.
 3. **Given** this feature, **When** navigating the product, **Then** there is no separate third diagnostic screen for the same technical content.
 
 ---
@@ -208,13 +213,13 @@ As a surfer, I want consistent Spanish condition language and non-color-only sta
 - **FR-006**: Day analysis MUST visually/typographically distinguish forecast facts from profile-derived interpretations when both appear.
 - **FR-007**: System MUST compute a global day rating on a 1.0–5.0 scale in 0.5 increments using a documented deterministic rule that mirrors the single best peak that has a **resolved condition grade** for that day (derived from that peak’s available engine outputs such as estimated size, wind quality, period, swell direction, hourly evolution, and uncertainty as available). Peaks in `uncertain`, `incomplete_forecast`, or `analysis_window_completed` MUST NOT be selected as the rating source. If no resolved-grade peak exists, output `Sin valoración` with reason. The rating MUST NOT average or blend multiple peaks; weaker or non-resolved peaks MUST still appear honestly on cards.
 - **FR-008**: Day rating presentation MUST include a mandatory numeric form that exactly matches any star/glyph visualization; an optional short qualitative caption MAY accompany the score when it is consistent with the documented mapping. Rating MUST NOT be described as a probability or validated skill metric.
-- **FR-009**: View A MUST list spot cards in the engine’s day-ranking order (condition grade rank plus existing engine tie-breaks; best resolved peaks first), with comparable fields when available, without duplicating the full day narrative on each card.
+- **FR-009**: View A MUST list spot cards under a neutral section title such as `PICOS DEL DÍA` or `SPOTS EVALUADOS` (MUST NOT use “recomendados” / recommendation-to-surf wording), in the engine’s day-ranking order (condition grade rank plus existing engine tie-breaks; best resolved peaks first), with comparable fields when available, without duplicating the full day narrative on each card.
 - **FR-010**: Spot cards MUST use FR-017 Spanish condition/state labels as the primary condition text. Resolved peaks MUST show the same documented 1–5 mapping applied to that peak (so card scores are comparable to the day rating). The single best resolved peak for the day MUST receive one additional distinct “best of day” marker. Cards MUST NOT introduce a second parallel role-badge vocabulary on every card. “Surfeable” MUST NOT be treated as “excellent.”
 - **FR-011**: Incomplete profiles or missing essential data MUST be shown as not evaluable; they MUST NOT receive a recommendation-style presentation.
 - **FR-012**: Users MUST be able to select among the five forecast days from a compact day list that highlights the selection and may show a short rating/status chip when data exist. View A MUST expose a compact FR-017 condition legend (sidebar, strip, or Help)—color alone is never sufficient.
-- **FR-013**: View B MUST show peak header, conditions, hourly evolution, best-window behavior, optional peak analysis, and rating/confidence as defined in US3, following the `mock2.png` information hierarchy.
+- **FR-013**: View B MUST show peak header, conditions, **sampled** analysis-window evolution (documented sample rule; not necessarily every hourly slot), best-window behavior, peak analysis when facts suffice, and rating/confidence as defined in US3, following the `mock2.png` information hierarchy.
 - **FR-014**: Best window MUST appear only when the existing engine supports it; otherwise the UI MUST explicitly say none exists.
-- **FR-015**: Technical provenance MUST be available as a collapsible or secondary `DETALLES TÉCNICOS` section inside View B (toggle via keyboard); the product MUST NOT add a third independent diagnostic screen for that content. Shared regional-cell warnings remain visible in this secondary area when relevant.
+- **FR-015**: Technical provenance MUST be available as a collapsible `DETALLES TÉCNICOS` section inside View B that starts **collapsed** on first open and toggles via keyboard (`D` or documented equivalent); the product MUST NOT add a third independent diagnostic screen for that content. Shared regional-cell warnings remain in this secondary area when relevant (visible when expanded).
 - **FR-016**: All primary user-facing prose and condition labels in this redesign MUST be Spanish; machine identifiers remain internal.
 - **FR-017**: User-facing Spanish condition/state labels MUST follow this compact vocabulary map (engine identifiers and thresholds unchanged): `very_good` and `good` → `Buena oportunidad`; `fair` → `Surfeable`; `small_but_surfable` → `Variable`; `no_surfable_waves` → `Pocas olas`; `uncertain` → `Incierto`; `incomplete_forecast` → `Pronóstico incompleto`; `analysis_window_completed` → `Ventana de análisis finalizada`.
 - **FR-018**: Status color MUST be supplementary only; every status also has text and/or a non-color symbol.
@@ -222,21 +227,21 @@ As a surfer, I want consistent Spanish condition language and non-color-only sta
 - **FR-020**: Keyboard navigation MUST support day change, spot change where applicable, open detail, toggle technical details, refresh per existing rules, stored-only query as a secondary action, help, back to summary, and quit; bindings may be adapted for terminal capability but MUST remain documented in the footer/help. After a forecast loads into View A, initial keyboard focus MUST be on the day list at the selected day.
 - **FR-021**: Spot names MUST display with correct Spanish capitalization for the five configured peaks (La Aguada, Zanja Honda, Los Botes, La Serena, La Balconada).
 - **FR-022**: Redesign MUST preserve existing snapshot immutability/traceability behavior for emitted queries.
-- **FR-023**: Day-rating calculation and day-analysis generation MUST remain separable from pure view rendering so each can be validated with example data.
-- **FR-024**: Day narrative and global day rating MUST be part of the shared forecast presentation consumed by the TUI and by machine-readable CLI/JSON outputs (including snapshots), not TUI-only ephemeral views.
+- **FR-023**: Day-rating calculation, peak-rating mapping, and day/peak-analysis generation MUST remain separable from pure view rendering so each can be validated with example data.
+- **FR-024**: Day narrative, global day rating, per-peak 1–5 scores (when resolved), and peak analysis text (when present) MUST be part of the shared forecast presentation consumed by the TUI and by machine-readable CLI/JSON outputs (including snapshots), not TUI-only ephemeral views.
 - **FR-025**: Existing forecast engine thresholds, profile fields, and classification formulas MUST remain unchanged by this feature; any future change requires independent justification outside this redesign’s visual needs.
 - **FR-026**: The TUI MUST NOT include an interactive read-only profiles screen; peak profiles remain human-editable versioned JSON outside the UI. Stored-only query MUST remain reachable as a secondary keyboard action documented in help/footer.
 - **FR-027**: Presentation verification MUST cover at least: normal good day, variable/mixed day, incomplete data, provisional profile, and analysis-window-completed today—via the project’s established verification approach (deterministic fixtures/checklists and any presentation checks added for this feature).
 - **FR-028**: Visual style MUST be dark, sober, high-contrast, with consistent monospace alignment; titles/separators in blue/cyan; favorable/variable/alert/neutral encoded with green/yellow/red/gray (and additional legend colors only when paired with FR-017 text) without large saturated backgrounds or excessive frames. Layout SHOULD follow `mock2.png` hierarchy; it MUST NOT require `mock1.jpg` chrome or imperial presentation.
 - **FR-029**: Primary screens MUST avoid showing internal ids, raw logs, or English machine enums as the main content.
-- **FR-030**: Optional peak analysis in View B, when shown, MUST use the same evidence-bound template/rules approach as the day analysis and MUST remain separable from view rendering for verification.
+- **FR-030**: Peak analysis in View B MUST appear when sufficient peak-scoped facts exist for at least one evidence-bound sentence; otherwise it MUST be omitted or replaced by a brief limitation. When shown, it MUST use the same evidence-bound template/rules approach as the day analysis and MUST remain separable from view rendering for verification.
 - **FR-031**: Conceptual mockup files `mock1.jpg` and `mock2.png` are design references only; illustrative numbers and copy in those images MUST NOT be copied into fixtures as if they were engine truth.
 
 ### Key Entities
 
 - **Daily Surf Report (View A)**: Selected-day presentation combining header, day analysis, global rating (+ optional caption), condition legend, and ordered spot cards—framed as an informe diario, not a raw comparator table.
 - **Day Analysis**: Deterministic Spanish narrative from structured day/peak facts and profiles via explicit templates/rules; includes limitation text when thin; never free-invented meteorology.
-- **Peak Analysis**: Optional shorter spot-scoped narrative under the same honesty rules.
+- **Peak Analysis**: Shorter spot-scoped narrative shown when peak facts suffice for ≥1 evidence-bound sentence; otherwise omitted/limitation; same honesty rules as day analysis.
 - **Global Day Rating**: Optional 1.0–5.0 (0.5 steps) indicator that mirrors the day’s single best peak with a resolved condition grade; reason when absent; not a probability and not a multi-peak average; never sourced from uncertain/incomplete/analysis-window-completed peaks.
 - **Peak Rating**: Same documented 1–5 mapping applied to an individual resolved peak for cards and View B.
 - **Spot Card**: Compact comparable peak summary for one day (FR-017 condition label, size range, period, wind, 1–5 when resolved, “best of day” marker for the top resolved peak).
@@ -271,7 +276,8 @@ As a surfer, I want consistent Spanish condition language and non-color-only sta
 - Spot-card order matches engine day ranking so the first resolved card is typically the best-of-day / rating source when one exists.
 - Half-step star glyphs may fall back to a terminal-safe alternative; numeric rating is the source of truth for accessibility.
 - Visual theme tokens (cyan titles, green/yellow/red/gray status) are presentation guidance, not additional business rules; mock legend colors may vary if text labels remain correct.
-- Implementation planning will document the exact mapping from a resolved peak’s engine outputs to the 1.0–5.0 scale and the sentence templates for day/peak analysis; the specification requires best-resolved-peak-only day rating, shared per-peak mapping, template-based narratives, dual-time honesty, determinism, and documentation rather than prescribing exact prose here.
+- Implementation planning will document: (1) the exact mapping from a resolved peak’s engine outputs to the 1.0–5.0 scale; (2) sentence templates for day/peak analysis; (3) the View B time-sampling rule (e.g. which analysis-window hours become morning/midday/afternoon rows). The specification requires best-resolved-peak-only day rating, shared per-peak mapping, template-based narratives, sampled evolution display, dual-time honesty, determinism, and documentation rather than prescribing exact prose or exact sample clock times here.
+- Full hourly slots remain in the underlying forecast/presentation model for best-window logic and verification even when View B displays only samples.
 - Verification remains primarily manual/fixture-driven as in the project baseline; “presentation tests” means reproducible presentation scenarios and checklists (and optional automated checks if the project later adopts them), not a mandate to introduce a full CI stack in this feature alone.
 - Branding string `SURF · LA PALOMA` is the user-facing product title for this redesign.
 - Default secondary key for stored-only remains `o` unless planning finds a conflict; help/footer MUST document the final binding.
@@ -285,7 +291,7 @@ As a surfer, I want consistent Spanish condition language and non-color-only sta
 - **Personal / zero cost**: MUST NOT introduce paid services or mandatory costs.
 - **On-demand**: MUST NOT add always-on daemons, alerts infrastructure, or background notification services.
 - **Honesty**: Uncertainty, incomplete forecast, stale data, and single-source limits MUST remain visible; day/peak ratings are indicators, not guarantees or probabilities. A polished daily-report UI MUST NOT be presented as improved forecast skill.
-- **Inform, do not decide**: Copy MUST NOT tell the user to surf or travel.
+- **Inform, do not decide**: Copy MUST NOT tell the user to surf or travel; section titles MUST avoid “recomendados” advice framing (use neutral peak/spot evaluation wording).
 - **Data integrity**: Narrative and ratings MUST NOT invent meteorological facts; raw Hs MUST NOT be presented as beach breaking height; derived estimates remain labeled as such in technical details.
 - **Traceability**: Snapshot id, criteria/profile versions, sources/models, conversion factors, and distinct data-age vs query-time remain available.
 - **Simplicity**: No favorites/preferences/alerts; no third diagnostic screen; no engine rewrite for cosmetics; no fabricating mock1-only fields.

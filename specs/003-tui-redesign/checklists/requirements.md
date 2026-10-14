@@ -35,6 +35,7 @@
 - Validation iteration 2 (2026-10-14): Resolved FR-017 vocabulary map (Option A), FR-024 shared presentation (Option A), FR-026 keep stored-only / remove profiles TUI screen (Option B). All checklist items pass.
 - Validation iteration 3 (2026-10-14): `/speckit-clarify` answered rating basis, evaluable peaks, card vocabulary, card order, and initial focus.
 - Validation iteration 4 (2026-10-14): Incorporated daily-surf-report framing, narrative/timestamp guidance, and conceptual mockups (`mock2.png` binding layout; `mock1.jpg` non-binding inspiration). Added FR-030/031, SC-010/011, peak analysis, shared 1–5 peak scores, dual-time edge case. Re-checked: no NEEDS CLARIFICATION markers; mock filenames are design artifacts, not implementation stack.
+- Validation iteration 5 (2026-10-14): Second `/speckit-clarify` — neutral spot-section title; peak analysis when facts suffice; shared peak scores/analysis in presentation; technical details collapsed by default; View B sampled hourly evolution. Exact 1–5 weights, sentence templates, and sample clock times remain deferred to `/speckit-plan`.
 - Terminal delivery and keyboard interaction are user-facing constraints, not tech-stack choices.
 - Exact 1–5 numeric mapping and sentence templates intentionally deferred to planning, with determinism/honesty required in the spec.
 - Spec directory aligned to branch `003-tui-redesign`.
