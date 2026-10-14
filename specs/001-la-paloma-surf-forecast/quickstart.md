@@ -30,6 +30,19 @@ If PowerShell blocks activation, the equivalent commands can use
 `.\.venv\Scripts\python.exe` directly. No account, API key, server, scheduler,
 or background service is required.
 
+## Windows executable (optional)
+
+Same delivery shape as db-log-explorer: one console `.exe`, no installer.
+
+```powershell
+.\scripts\build-exe.ps1
+.\surf-forecast.exe
+```
+
+`config\` next to the `.exe` is editable (`peaks.json`, `criteria.json`). If it
+is missing, the first run copies the bundled defaults beside the executable.
+Snapshots go in `data\` next to the `.exe`. The binary itself is gitignored.
+
 ## Configure and validate profiles
 
 Edit these UTF-8 JSON files:

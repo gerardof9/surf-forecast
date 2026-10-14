@@ -6,6 +6,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+/surf-forecast.exe
 .eggs/
 data/
 .DS_Store

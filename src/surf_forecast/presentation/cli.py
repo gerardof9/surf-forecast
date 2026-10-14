@@ -21,6 +21,7 @@ from surf_forecast.application.replay_service import load_fixture, replay_fixtur
 from surf_forecast.domain.models import QueryMode, QueryRequest
 from surf_forecast.domain.presentation import CONDITION_LABELS, STATE_LABELS, spanish_reasons
 from surf_forecast.presentation.json_output import emit_error, emit_json, stderr
+from surf_forecast.paths import ensure_runtime_layout
 from surf_forecast.storage.snapshots import latest_snapshot, read_snapshot
 
 EXIT_OK = 0
@@ -32,6 +33,7 @@ EXIT_REPLAY = 5
 
 
 def main(argv: list[str] | None = None) -> int:
+    ensure_runtime_layout()
     parser = _parser()
     try:
         args = parser.parse_args(argv)
