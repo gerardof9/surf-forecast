@@ -24,7 +24,7 @@
 |-------------|-----------------------------------|
 | 3-pane comparator vs daily report | Replace TUI composition with View A / View B per `mock2.png` + `spec.md`; keep same `run_forecast` use case |
 | Labels `Aceptable`/`Buena`/… vs FR-017 | Change **display** labels and presentation mapping only; do not change `SurfGrade` thresholds |
-| `SPOTS RECOMENDADOS` in mock | Use neutral `PICOS DEL DÍA` / `SPOTS EVALUADOS` (clarify) |
+| `SPOTS RECOMENDADOS` in mock | Use only neutral `PICOS DEL DÍA` (clarify; `SPOTS EVALUADOS` rejected) |
 | Profile screen present | Remove from TUI; keep JSON path in Help; keep `list_profiles` for non-TUI if needed |
 | `mock1.jpg` dense chart product | Out of scope; do not fabricate secondary swell / °F / ft |
 | Spec mentions “presentation tests”; repo has none | Add **focused** pure-Python checks for rating/narrative/sampling transforms (Principle XI); TUI visuals remain manual checklist |
@@ -77,6 +77,12 @@
 - **Decision**: View B shows up to three rows — first available slot in bands `06:00–10:59`, `11:00–14:59`, `15:00–20:00` America/Montevideo within the analysis window. Omit empty bands. Best window remains the **engine** field (`best_window`), never inferred from samples.
 - **Rationale**: Clarify Option A + mock density; full `reference_slots` stay in payload for verification.
 
+## Decision: Wind km/h display via pass-through (no new evaluation formula) — post-analyze U3
+
+- **Decision**: Cards, peak summary, and `evolution_samples` MAY show sustained wind speed (km/h) and direction when available by **passing through** values already present on engine slot inputs (`wind.speed_kmh`, `wind.direction_deg` / labeled direction) into the presentation payload (extend `WindAssessment` or slot dict with **display-only** fields). Intensity/relative class remain the engine’s existing classifications. **Do not** change wind-band thresholds, quality rules, or invent a presentation-layer wind score.
+- **Rationale**: Spec US1/US3 ask for compact wind with km/h; analyze underspecification (U3) required an explicit non-threshold path so implementers do not “derive” speed from intensity bands.
+- **Alternatives considered**: Infer mid-band km/h from intensity labels (rejected: invents numbers); leave km/h out of UI (rejected: mock/spec expect metric wind).
+
 ## Decision: Technical details collapsed; profiles out; stored-only stays
 
 - **Decision**: `D` toggles collapsed-by-default technical section; remove `p`/ProfileScreen; keep `o` stored-only; update Help.
@@ -90,15 +96,16 @@
 
 ## Decision: Verification approach
 
-- **Decision**: (1) Pure-Python deterministic checks for grade→score, narrative omission rules, sampling bands, label map. (2) Manual quickstart checklist for View A/B, keyboard, narrow/wide, incomplete/uncertain/provisional/window-completed. (3) Existing engine fixture replay must still pass.
+- **Decision**: (1) Pure-Python deterministic checks for grade→score, narrative omission rules, sampling bands, label map, **provisional-profile day**, and **analysis-window-completed today** (post-analyze U2). (2) Manual quickstart checklist for View A/B, keyboard, narrow/wide, incomplete/uncertain/provisional/window-completed, fact-vs-interpretation styling, wind km/h when pass-through present. (3) Existing engine fixture replay must still pass.
 - **Rationale**: Principle XI; no CI mandate.
 
 ## Confirmed presentation-policy decisions (2026-10-14)
 
-1. Grade→score table above — **confirmed**.
+1. Grade→score table above — **confirmed** (ordinal only; v1 whole points).
 2. Qualitative captions per score — **confirmed** as in `data-model.md`.
 3. Evolution sample bands `06:00–10:59` / `11:00–14:59` / `15:00–20:00` — **confirmed**.
 4. Canonical spot-section title — **`PICOS DEL DÍA`** (not “recomendados”; `SPOTS EVALUADOS` rejected for consistency).
+5. Post-analyze: FR-006 sentence-kind render; provisional + window-completed checks; wind km/h pass-through — **confirmed** (see decisions above).
 
 ## Pre-/tasks gate (stakeholder checklist)
 

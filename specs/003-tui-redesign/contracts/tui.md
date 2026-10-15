@@ -50,9 +50,10 @@ All query actions call existing application services (`run_forecast` modes).
 - Selected weekday/date, horizon today+4
 - Meteorological update/age distinct from query execution time
 - `day_analysis.text` (scrollable; no silent truncation)
-- `day_rating` or `Sin valoración` + reason
-- Neutral section `PICOS DEL DÍA`; never “recomendados”
-- Cards: display_name, FR-017 label, size range m, period s, wind, peak_rating when present, best_of_day marker
+- Distinct styling/prefixes for `day_analysis.sentences[].kind` (`fact` vs `interpretation` vs `limitation`) when sentences are present (FR-006)
+- `day_rating` or `Sin valoración` + reason; stars match whole-point numeric score (v1)
+- Neutral section title exactly `PICOS DEL DÍA`; never “recomendados” / `SPOTS EVALUADOS`
+- Cards: display_name, FR-017 label, size range m, period s, wind (intensity/class + km/h when pass-through present), peak_rating when present, best_of_day marker
 - Compact day list with focus on load
 
 ### Narrow terminals
@@ -65,8 +66,8 @@ Stack vertically: header → days → analysis → rating → peaks. Scroll; no 
 
 ```text
 ┌ ← Pico · fecha · ventana 06:00–20:00 UYT · condición · tamaño ───────────────┐
-│ Condiciones / viento / swell / confianza / peak_rating                         │
-│ Evolución (evolution_samples)                                                  │
+│ Condiciones / viento (km/h si hay pass-through) / swell / confianza / rating   │
+│ Evolución (evolution_samples; wind km/h when present)                          │
 │ MEJOR VENTANA ESTIMADA | o mensaje de ausencia                                 │
 │ Peak analysis (si existe)                                                      │
 │ [DETALLES TÉCNICOS]  ← collapsed by default; D toggles                         │

@@ -39,13 +39,13 @@ Extends `001` presentation with:
 
 | Field | Type | Rules |
 |-------|------|-------|
-| `score` | number | ∈ {1.0, 1.5, …, 5.0}; v1 confirmed map uses whole points 1.0–5.0 from `SurfGrade` only |
+| `score` | number | Scale admits 0.5 steps on [1.0, 5.0]; **v1 MUST emit whole points only** `{1.0, 2.0, 3.0, 4.0, 5.0}` via ordinal `SurfGrade` map — never a multi-factor recomputation |
 | `source_peak_id` | string | Best resolved peak used |
 | `caption` | string/null | Optional qualitative caption consistent with score |
-| `method` | string | e.g. `best_resolved_grade_map_v1` |
+| `method` | string | MUST be `best_resolved_grade_map_v1` for this feature |
 | `glyph_steps` | number | Same numeric value for star renderer |
 
-**Validation**: `glyph_steps == score`. Never emit score for uncertain/incomplete/analysis_window_completed peaks as source.
+**Validation**: `glyph_steps == score`. Never emit score for uncertain/incomplete/analysis_window_completed peaks as source. Presentation MUST NOT re-score size/wind/period/direction.
 
 ### PeakReport (extends peak object)
 
@@ -58,6 +58,9 @@ Extends `001` presentation with:
 | `peak_analysis` | PeakAnalysis/null | Present when ≥1 evidence-bound sentence possible |
 | `peak_analysis_absent_reason` | string/null | When omitted |
 | `best_of_day` | bool | True iff this peak is the day rating source / top resolved highlight |
+| `wind_dir_label` | string/null | Card/summary wind direction label when available (pass-through) |
+| `wind_speed_kmh` | number/null | Card/summary sustained wind km/h when available (**pass-through** of engine slot input; not inferred from intensity bands) |
+| `wind_intensity` | string/null | Engine intensity class when available |
 | `evolution_samples` | EvolutionSample[] | 0–3 sampled slots for View B |
 | `reference_slots` | array | Full hourly slots retained for verification / best window |
 
@@ -83,9 +86,9 @@ Same shape as `DayRating` but `source_peak_id` is self.
 | `band` | enum | `morning` \| `midday` \| `afternoon` |
 | `local_hour` | string | `HH:MM` |
 | `size_point_m` | number/null | |
-| `wind_dir_label` | string/null | |
-| `wind_speed_kmh` | number/null | if available in slot/presentation enrichment |
-| `wind_intensity` | string/null | |
+| `wind_dir_label` | string/null | Pass-through / labeled direction from slot wind input |
+| `wind_speed_kmh` | number/null | Pass-through of slot wind `speed_kmh` when present; MUST NOT invent mid-band values from intensity |
+| `wind_intensity` | string/null | Engine intensity class |
 | `condition_label` | string/null | FR-017 or state label |
 | `incomplete_or_uncertain` | bool | |
 

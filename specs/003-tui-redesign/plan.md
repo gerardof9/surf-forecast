@@ -107,10 +107,13 @@ ForecastPresentation.payload  schema 1.1.0
 
 ## Confirmed functional decisions (2026-10-14)
 
-1. **Grade→score**: `no_surfable_waves` 1.0 · `small_but_surfable` 2.0 · `fair` 3.0 · `good` 4.0 · `very_good` 5.0; day = best resolved peak; method `best_resolved_grade_map_v1`.
-2. **Captions**: as listed in `data-model.md` (optional FR-008 accompaniment).
+1. **Grade→score**: `no_surfable_waves` 1.0 · `small_but_surfable` 2.0 · `fair` 3.0 · `good` 4.0 · `very_good` 5.0; day = best resolved peak; method `best_resolved_grade_map_v1`. **Ordinal display encoding only** — no multi-factor presentation formula (post-analyze I1).
+2. **Captions**: as listed in `data-model.md` (optional FR-008 accompaniment). **v1 emits whole-point scores only** (post-analyze I2); half-step glyphs unused unless a later refinement emits half scores.
 3. **Evolution bands**: first slot in `06:00–10:59`, `11:00–14:59`, `15:00–20:00` UYT; omit empty; best window from engine only.
-4. **Section title**: `PICOS DEL DÍA`.
+4. **Section title**: exactly `PICOS DEL DÍA` — no `SPOTS EVALUADOS` / “recomendados” synonyms (post-analyze I3).
+5. **FR-006 render**: View A MUST style/prefix `day_analysis.sentences[].kind` (`fact` | `interpretation` | `limitation`) distinctly (post-analyze U1).
+6. **Verification fixtures**: focused checks MUST cover provisional-profile and analysis-window-completed-today cases (post-analyze U2), not only good/mixed/incomplete.
+7. **Wind km/h**: presentation pass-through of engine slot wind speed/direction for cards/samples/detail; **no** evaluation threshold changes (post-analyze U3).
 
 ## Project Structure
 
@@ -173,10 +176,11 @@ src/surf_forecast/
 
 | Path | Change |
 |------|--------|
-| `src/surf_forecast/domain/presentation.py` | FR-017 labels; assemble 1.1.0 fields |
-| `src/surf_forecast/domain/day_rating.py` | **NEW** |
-| `src/surf_forecast/domain/narrative.py` | **NEW** |
-| `src/surf_forecast/domain/evolution_samples.py` | **NEW** |
+| `src/surf_forecast/domain/presentation.py` | FR-017 labels; assemble 1.1.0 fields; wind speed/direction pass-through for cards/samples |
+| `src/surf_forecast/domain/day_rating.py` | **NEW** — ordinal map only |
+| `src/surf_forecast/domain/narrative.py` | **NEW** — templates + `sentences[].kind` |
+| `src/surf_forecast/domain/evolution_samples.py` | **NEW** — bands + wind pass-through fields |
+| `src/surf_forecast/domain/models.py` | Optional display-only wind speed/dir on `WindAssessment` / slot DTOs (no threshold logic) |
 | `src/surf_forecast/presentation/tui/screens.py` | Replace ForecastScreen layout with A/B |
 | `src/surf_forecast/presentation/tui/app.py` | Bindings; drop profiles action |
 | `src/surf_forecast/presentation/tui/widgets.py` | Stars, cards, legend, technical panel |
@@ -186,10 +190,10 @@ src/surf_forecast/
 
 ## Testing strategy
 
-1. **Pure transforms**: label map, score map, best-peak selection, narrative omission, sampling bands.
-2. **Engine regression**: existing fixture replay / manual engine scenarios from `001` quickstart still pass.
-3. **Manual TUI**: `quickstart.md` scenarios (good / mixed / incomplete / provisional / window completed / dual time / narrow width).
-4. **Stars**: numeric and glyph always agree; half-step glyph fallback if a half score is ever emitted.
+1. **Pure transforms**: label map, ordinal score map, best-peak selection, narrative omission, sampling bands, wind pass-through presence/absence, provisional-profile day, analysis-window-completed today.
+2. **Engine regression**: existing fixture replay / manual engine scenarios from `001` quickstart still pass (thresholds untouched).
+3. **Manual TUI**: `quickstart.md` scenarios (good / mixed / incomplete / provisional / window completed / dual time / narrow width / fact-vs-interpretation / wind km/h when present).
+4. **Stars**: numeric and glyph always agree on whole points in v1; half-step glyph unused unless a later refinement emits half scores.
 
 ## Risks and incompatibilities
 
