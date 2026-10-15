@@ -34,7 +34,7 @@ Replace the 003/004 “5-day board + all peaks + legend + technical narrative”
 - No Tiempo / Energía metrics
 - No View B / peak-detail screen
 - Active Spec Kit feature = `specs/005-daily-brief` only
-- Constitution VI advisory exception documented in Complexity Tracking
+- Constitution VI (v1.1.0) allows personal advisory when/where; no wave/safety guarantees
 
 **Scale/Scope**: Shared presentation + narrative rewrite; TUI home rewrite (2× DayBriefCard); CLI/JSON adapters; remove PeakDetailScreen path; checks/smoke updates
 
@@ -50,7 +50,7 @@ Any FAIL that must proceed requires an entry in Complexity Tracking.
 - [x] **III. Configurable criteria**: Worth threshold is a presentation filter over existing grades (fair+); engine criteria untouched
 - [x] **IV. Modular simplicity**: DayBrief built in presentation/narrative; TUI only renders; evaluation separate
 - [x] **V. Honest uncertainty**: Empty worth list, n/d height, wide-window wording; no invented beaches
-- [ ] **VI. Inform, don't decide**: **JUSTIFIED FAIL** — home brief MAY recommend when/where (FR-010); still no wave/safety guarantees → see Complexity Tracking
+- [x] **VI. Inform, don't decide**: Constitution 1.1.0 allows personal advisory when/where briefs; FR-010 still forbids wave/safety guarantees
 - [x] **VII. Reality validation**: Manual prose review on real fixtures; no superiority claim for forecast skill
 - [x] **VIII. No invented/confused data**: Height remains derived; below-threshold peaks not used for height/window; offshore ≠ breaking
 - [x] **IX. Traceability**: snapshot_id / criteria_version / sources remain in payload; tech depth may move off interactive path
@@ -60,7 +60,7 @@ Any FAIL that must proceed requires an entry in Complexity Tracking.
 - [x] **XIII. Privacy / minimal scope**: Unchanged
 - [x] **XIV. Implementation discipline**: Clarifications closed; VI exception explicit
 
-**Post-design re-check**: PASS with same VI justified exception — contracts encode advisory copy + honesty rules; engine unchanged.
+**Post-design re-check**: PASS — constitution 1.1.0 aligns VI with advisory briefs; contracts encode honesty rules; engine unchanged.
 
 ## Project Structure
 
@@ -115,6 +115,7 @@ scripts/
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| **VI. Inform, don't decide** — advisory “conviene ir a X a la hora Y” on home | Personal-use product goal is exactly when/where guidance (spec clarifications + FR-010); still forbids guarantees of waves/safety | Strict “facts only, never recommend beaches/times” keeps the 003 five-peak board that the user rejected as useless |
 | **Supersede 003 “show poor peaks on board”** | Worth filter (fair+, max 3) is the core UX | Showing all five peaks implies equal relevance and hides the one beach worth going |
 | **Schema 1.2.0 breaking change** | Shared contract must drop days 3–5 and ship DayBrief fields for TUI/CLI/JSON parity | TUI-only rewrite would leave CLI/JSON on the old technical narrative (clarify Q1 rejected) |
+
+> Note: Former VI “justified FAIL” removed — constitution **1.1.0** now permits personal advisory when/where briefs without wave/safety guarantees.

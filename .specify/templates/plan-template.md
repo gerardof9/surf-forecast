@@ -53,8 +53,9 @@ Any FAIL that must proceed requires an entry in Complexity Tracking.
       presentation stay separable; no unjustified abstractions/deps
 - [ ] **V. Honest uncertainty**: Scores are not sold as success probabilities
       unless calibrated; gaps/discrepancies are visible
-- [ ] **VI. Inform, don't decide**: Output supports user judgment; no
-      surfacable-wave guarantees or safety substitution
+- [ ] **VI. Inform, don't decide**: Personal advisory when/where briefs are
+      allowed; MUST NOT claim surfable-wave guarantees or replace safety
+      judgment; advice remains estimative
 - [ ] **VII. Reality validation**: Improvements tied to observations / documented
       comparisons when claiming superiority
 - [ ] **VIII. No invented/confused data**: Units, coords, peak orientation

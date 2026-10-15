@@ -8,7 +8,7 @@
 
 **Organization**: Tasks grouped by user story (US1–US4). Shared DayBrief assembly (schema slice, worth filter, narrative `template_v2`) is foundational and blocks all stories.
 
-**Constitution notes**: Principle VI advisory exception is intentional (plan Complexity Tracking). Keep honesty (no invented spots; derived height; no wave/safety guarantees). Personal / zero-cost / on-demand only.
+**Constitution notes**: Principle VI (constitution 1.1.0) allows personal advisory when/where briefs. Keep honesty (no invented spots; derived height; no wave/safety guarantees). Personal / zero-cost / on-demand only.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -30,7 +30,7 @@
 **Purpose**: Align agent context and stub check expectations without shipping product behavior yet
 
 - [ ] T001 Confirm active feature pin is `specs/005-daily-brief` in `.specify/feature.json` and `.cursor/rules/specify-rules.mdc` points at `specs/005-daily-brief/plan.md`
-- [ ] T002 [P] Add failing/placeholder assertions notes at top of `scripts/check_report_presentation.py` docstring referencing `contracts/presentation-1.2.0.md` (do not break green until Phase 2 implements 1.2.0, or gate new asserts behind a clear TODO comment block)
+- [ ] T002 [P] Verify `specs/005-daily-brief/contracts/presentation-1.2.0.md` is linked from `specs/005-daily-brief/quickstart.md` — **do not** add early/placeholder asserts in `scripts/check_report_presentation.py` (all 1.2.0 enforcement is T010 only)
 - [ ] T003 [P] Document DayBrief smoke expectations in `specs/005-daily-brief/quickstart.md` (commands already present — verify paths match repo entrypoints)
 
 ---
@@ -42,14 +42,15 @@
 **⚠️ CRITICAL**: Do not modify grade/`best_window` selection formulas; only presentation assembly + narrative templates
 
 - [ ] T004 Implement worth-spot ranking helper (fair+ only, max 3, stable tie-break) used by presentation in `src/surf_forecast/domain/presentation.py` (or small helper module next to it) per `data-model.md`
-- [ ] T005 [P] Implement GoWindowView + HeightSummary mapping from a peak’s `best_window` / size (wide-window honesty; `HH:MM`; null when no best) in `src/surf_forecast/domain/presentation.py` and reuse display hygiene from `src/surf_forecast/presentation/tui/formatters.py` where appropriate (pure functions preferred)
+- [ ] T005 Implement GoWindow + HeightSummary mapping from a peak’s `best_window` / size (wide-window honesty; `HH:MM`; null when no best) in `src/surf_forecast/domain/presentation.py` and reuse display hygiene from `src/surf_forecast/presentation/tui/formatters.py` where appropriate (pure functions preferred; depends on T004 ranking)
 - [ ] T006 Rewrite day narrative to `template_v2` plain Spanish `headline` + `body` (+ optional `caution`) in `src/surf_forecast/domain/narrative.py` — no `≈`/`◇`/`!` lead voice; advisory when/where allowed with estimate disclaimer
 - [ ] T007 Assemble nested `brief` object (DayBrief fields) from day + worth spots + narrative in `src/surf_forecast/domain/presentation.py`
 - [ ] T008 Slice presentation `days` to Hoy/Mañana only and set `schema_version` to `1.2.0` in `src/surf_forecast/domain/presentation.py` per `contracts/presentation-1.2.0.md` (engine may still compute longer horizon)
 - [ ] T009 Remove/replace home-facing dependency on old `day_analysis` kind bags for presented days in `src/surf_forecast/domain/presentation.py` (brief replaces it on the wire)
-- [ ] T010 Update `scripts/check_report_presentation.py` to enforce 1.2.0 invariants (2 days, brief required, worth ≤3 fair+, empty ⇒ null height/window)
+- [ ] T010 Update `scripts/check_report_presentation.py` to enforce 1.2.0 invariants (2 days, brief required, worth ≤3 fair+, empty ⇒ null height/window, **no** `tiempo`/`energia`/`Tiempo`/`Energía` keys on days/brief)
 - [ ] T011 [P] Adapt `src/surf_forecast/presentation/json_output.py` if it hard-codes old schema metadata so JSON emits the shared 1.2.0 payload
 - [ ] T012 [P] Adapt `src/surf_forecast/presentation/cli.py` to print DayBrief fields for the two presented days (headline, body, height, go_window, worth names)
+- [ ] T036 Handle incomplete/missing Mañana (or single-day engine horizon): second presented day MUST show explicit limited/missing brief state and MUST NOT clone Hoy silently — implement in `src/surf_forecast/domain/presentation.py` + assert in `scripts/check_report_presentation.py`
 
 **Checkpoint**: Fixture → presentation payload is 1.2.0 with two briefs; CLI/JSON show plain brief — TUI may still be old until US1
 
@@ -70,6 +71,7 @@
 - [ ] T017 [US1] Remove home legend/peaks section constants usage from `src/surf_forecast/presentation/tui/theme.py` (or stop importing `LEGEND_LINES` / `SECTION_PEAKS` on home)
 - [ ] T018 [US1] Update StatusBar / Help copy for two-card home (no compare-five-peaks / no legend) in `src/surf_forecast/presentation/tui/components/status_bar.py` and Help screen in `src/surf_forecast/presentation/tui/screens.py`
 - [ ] T019 [US1] Extend `scripts/check_tui_visual_smoke.py` to assert two day cards render and strings `PICOS DEL DÍA` / `LEYENDA` are absent
+- [ ] T037 [US1] Assert dual honesty timestamps remain visible on home (query/consultation time and meteorological data-update time) in `scripts/check_tui_visual_smoke.py` and/or home populate in `src/surf_forecast/presentation/tui/screens.py` per FR-014
 
 **Checkpoint**: MVP demoable — two-card home from shared brief
 
@@ -159,9 +161,9 @@
 ### Parallel Opportunities
 
 - T002/T003 in Setup
-- T005 with early narrative drafting only after T004 interface known; prefer T004 → T005 → T006 → T007 → T008 sequence for presentation
-- T011/T012 after T008 in parallel
-- T014 parallel once T013 file exists
+- T004 → T005 → T006 → T007 → T008 sequence for presentation (T005 is **not** parallel)
+- T011/T012 after T008 in parallel; T036 with T010 after T008
+- T014 parallel once T013 file exists; T037 after T015/T019
 - T023 / T027 / T032 / T033 / T035 marked [P] where noted
 
 ---
@@ -207,4 +209,5 @@ T014 Export DayBriefCard
 - Do not reopen evaluation formulas
 - Advisory prose is allowed; guarantees are not
 - Commit after each task or logical group
-- Suggested MVP = Phase 1–3 (T001–T019)
+- Suggested MVP = Phase 1–3 (T001–T019 + T036–T037 as applicable)
+- Analyze remediation 2026-10-15: C1 constitution 1.1.0; I1 Input; A1 T002; I3 T005; U1 T036; U2 T037; G1 T010; I2 GoWindow naming

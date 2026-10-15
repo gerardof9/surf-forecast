@@ -59,14 +59,14 @@
 
 **Rationale**: Clarify Q1.
 
-## R8: Constitution VI exception
+## R8: Constitution VI (resolved)
 
-**Decision**: Document in plan Complexity Tracking; narrative may say “conviene priorizar {playa} entre {HH:MM}–{HH:MM}” with a fixed disclaimer line that conditions are estimates, not guarantees. Do **not** amend constitution in this feature unless user runs `/speckit-constitution` later.
+**Decision**: Constitution amended to **1.1.0** — personal advisory when/where briefs are allowed; MUST NOT claim wave or safety guarantees. Narrative may say “conviene priorizar {playa} entre {HH:MM}–{HH:MM}” with estimative disclaimer. No longer a Complexity Tracking FAIL.
 
-**Rationale**: Spec Constitution Constraints; planning prompt.
+**Rationale**: Analyze C1 remediation; matches FR-010 and personal-use product goal.
 
 ## R9: Verification
 
-**Decision**: Extend `check_report_presentation.py` for `schema_version == 1.2.0`, `len(days)==2`, brief required fields, worth cap ≤3, grades ≥ fair, height/window null when no worth spots. Update TUI smoke: assert two cards; assert strings PICOS DEL DÍA / LEYENDA absent; assert PeakDetailScreen not pushed. Manual SC-004 prose review on ≥5 fixture days.
+**Decision**: Extend `check_report_presentation.py` for `schema_version == 1.2.0`, `len(days)==2`, brief required fields, worth cap ≤3, grades ≥ fair, height/window null when no worth spots, no Tiempo/Energía keys, incomplete-Mañana explicit state. Update TUI smoke: assert two cards; assert PICOS DEL DÍA / LEYENDA absent; assert dual timestamps; assert PeakDetailScreen not pushed. Manual SC-004 prose review on ≥5 fixture days.
 
-**Rationale**: Constitution XI; SC-002/003/006.
+**Rationale**: Constitution XI; SC-002/003/006; analyze U1/U2/G1.

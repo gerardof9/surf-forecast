@@ -1,14 +1,16 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.0.1
-- Modified principles: none renamed; full document translated Spanish → English (PATCH)
+- Version change: 1.0.1 → 1.1.0
+- Modified principles: VI. Inform, do not decide for the user → expanded to allow
+  personal advisory when/where briefs without wave or safety guarantees
 - Added sections: none
 - Removed sections: none
 - Templates requiring updates:
-  - .specify/templates/plan-template.md ✅ already English
-  - .specify/templates/spec-template.md ✅ already English
-  - .specify/templates/tasks-template.md ✅ already English
-  - specs/001-la-paloma-surf-forecast/spec.md ✅ translated in same change set
+  - .specify/templates/plan-template.md ✅ VI check wording
+  - .specify/templates/spec-template.md ✅ no change required (honesty/data integrity cover guarantees)
+  - .specify/templates/tasks-template.md ✅ no change required
+  - specs/005-daily-brief/spec.md ✅ Constitution Constraints + Input sync
+  - specs/005-daily-brief/plan.md ✅ VI gate + Complexity Tracking
 - Follow-up TODOs: none
 -->
 
@@ -73,12 +75,16 @@ explicitly; they MUST NOT be hidden behind seemingly precise scores.
 
 The system presents data, estimated conditions, evaluations, limitations,
 and confidence levels to support the user's personal decision to travel or
-surf. It MUST NOT present its classifications as guarantees that surfable
-waves will exist, nor replace the user's assessment of real conditions and
-safety.
+surf. For this personal-use project, the presentation MAY include an
+**advisory brief** that states preferred times and beaches (when/where)
+derived from those evaluations. It MUST NOT present classifications or
+advice as guarantees that surfable waves will exist, MUST NOT claim
+certainty of in-water outcomes, and MUST NOT replace the user's assessment
+of real conditions and safety. Advisory copy MUST remain clearly estimative.
 
 **Rationale**: In-water safety is the user's responsibility; the system is
-informational support.
+decision-support. A plain when/where brief is allowed for personal use so
+long as it never pretends to guarantee waves or safety.
 
 ### VII. Validation against reality
 
@@ -179,7 +185,8 @@ implementation decision.
 - Every plan (`plan.md`) MUST pass the Constitution Check before research
   (Phase 0) and re-check after design (Phase 1).
 - Every specification MUST respect zero cost, honesty about uncertainty,
-  no invented data, and the informational (non-decisional) role.
+  no invented data, and Principle VI (advisory when/where allowed for
+  personal use; never wave or safety guarantees).
 - Tasks MUST favor modularity, traceability, and pragmatic verification;
   they MUST NOT assume accounts, complex CI, or permanent infrastructure
   by default.
@@ -207,4 +214,4 @@ reviews of results against real observations (Principles VII and XI).
 Complexity, costs, and new dependencies require prior written
 justification (Principle XIV).
 
-**Version**: 1.0.1 | **Ratified**: 2026-10-12 | **Last Amended**: 2026-10-13
+**Version**: 1.1.0 | **Ratified**: 2026-10-12 | **Last Amended**: 2026-10-15

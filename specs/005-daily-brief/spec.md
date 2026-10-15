@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "Brief diario tipo Pronóstico Experto: home con exactamente 2 tarjetas (Hoy y Mañana). Cada tarjeta muestra condición, altura surfeable, headline corto, análisis en prosa natural (sin jerga técnica ni ≈◇!), mejor ventana horaria en HH:MM, y solo spots que valen la pena (filtrar por umbral de grade/score; máximo 2–3). Quitar de la home: rail DÍAS de 5 días, sección PICOS DEL DÍA, grid de PeakCards, y LEYENDA. No mostrar Tiempo ni Energía. Uso personal: el brief puede recomendar cuándo y a qué playas ir (deroga 'informar no decidir' estricto y la regla 003 de mostrar todos los picos malos en la home). Conservar motor de grades/best_window; reescribir narrative. View B opcional/secundario."
+**Input**: User description: "Brief diario tipo Pronóstico Experto: home con exactamente 2 tarjetas (Hoy y Mañana). Cada tarjeta muestra condición, altura surfeable, headline corto, análisis en prosa natural (sin jerga técnica ni ≈◇!), mejor ventana horaria en HH:MM, y solo spots que valen la pena (filtrar por umbral de grade/score; máximo 2–3). Quitar de la home: rail DÍAS de 5 días, sección PICOS DEL DÍA, grid de PeakCards, y LEYENDA. No mostrar Tiempo ni Energía. Uso personal: el brief puede recomendar cuándo y a qué playas ir. Conservar motor de grades/best_window; reescribir narrative. View B eliminada (no pantalla de detalle)."
 
 **Supersedes on home UX** (for this feature only): `003-tui-redesign` home layout (5-day rail + PICOS DEL DÍA + LEYENDA) and the “show every poor peak on the board” home rule. Forecast engine grades / `best_window` remain the source of truth; presentation and narrative change.
 
@@ -21,6 +21,7 @@
 - Q: What about days 3–5 beyond Mañana? → A: Option B — Engine may still evaluate a longer horizon; shared presentation exposes only Hoy and Mañana (no days 3–5 in TUI/CLI/JSON).
 - Q: When multiple worth spots have different windows, which day timing is shown? → A: Option A — Use only the best worth-spot’s window (first in the ranked list).
 - Q: Where does the card’s large surfeable height come from? → A: Option A — Height range of the best worth-spot; if none qualify, show n/d / no clear height (do not use below-threshold peaks).
+- Q: Constitution VI vs advisory when/where? → A: Constitution amended to 1.1.0 — personal advisory when/where briefs allowed; no wave/safety guarantees.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -149,7 +150,7 @@ As a personal user, I only need the two day briefs. There is **no** peak detail 
 - Worth threshold defaults to fair-or-better in the existing grade vocabulary; max three spots is enough.
 - Tiempo/Energía and expert photo/branding from third-party sites are explicitly out of scope.
 - Peak-detail View B is **removed** from the interactive product for this feature (not merely de-emphasized). Technical evolution tables are out of the interactive path; raw evaluation data may still exist internally for building DayBrief.
-- Constitution Principle VI is **narrowly relaxed for home copy**: the app may say “conviene ir a X a la hora Y” as personal advisory language, while Principle V/VIII honesty (no guarantees, no invented data, no Hs-as-breaking) still binds.
+- Constitution Principle VI (v1.1.0) allows personal advisory when/where briefs; V/VIII honesty (no guarantees, no invented data, no Hs-as-breaking) still binds.
 - Specs `003` / `004` remain historical for engine/visual craft; **home information architecture follows this `005` spec**.
 - Presentation channels share one DayBrief; only chrome/layout differs by channel.
 
@@ -159,6 +160,6 @@ As a personal user, I only need the two day briefs. There is **no** peak detail 
 - **On-demand**: Local/on-demand run; no always-on infrastructure.
 - **Honesty**: Uncertainty and limitations remain representable; recommendations are indicators, not guarantees of waves or safety (**FR-010**).
 - **Data integrity**: Observed vs forecast vs derived stay distinct; unknown values not invented; height remains derived (**FR-011**).
-- **Principle VI tension (explicit)**: This feature **intentionally** allows when/where advisory wording on the home brief for personal use. It does **not** claim guaranteed surf or replace in-water judgment. A future constitution MINOR amendment may formalize “advisory brief allowed for personal use”; until then, this spec documents the justified exception for home narrative only.
+- **Principle VI (aligned, constitution 1.1.0)**: Home brief MAY recommend when/where as personal advisory decision-support; MUST NOT claim guaranteed surf or replace in-water safety judgment.
 - **Out of scope by default**: Accounts, payments, telemetry, multi-user—unchanged.
 - **Supersession note**: Showing only worth-going spots on home **contradicts** older 003 “poor peaks must remain visible on the board.” That older home rule is **superseded by FR-007–FR-009** for this feature’s home view.

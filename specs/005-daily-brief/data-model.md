@@ -21,7 +21,7 @@ Primary home/CLI/JSON day object (one per presented day).
 | `body` | string | Multi-sentence plain Spanish analysis |
 | `caution` | string \| null | Optional single honesty caution (not the lead voice) |
 | `height` | object \| null | See HeightSummary; null if no worth spot |
-| `go_window` | object \| null | See GoWindowView; null if no worth spot |
+| `go_window` | object \| null | See GoWindow; null if no worth spot |
 | `worth_spots` | WorthSpot[] | 0–3 items; fair+ only; best-first |
 | `empty_spots_message` | string \| null | Required copy when `worth_spots` empty |
 
@@ -48,9 +48,9 @@ From **best** worth-spot’s derived size only.
 | `display` | string | e.g. `0,8–1,2 m` (comma decimal) |
 | `kind` | `"derived"` | Never claim offshore Hs as breaking |
 
-### GoWindowView
+### GoWindow
 
-From **best** worth-spot’s `best_window` only.
+From **best** worth-spot’s `best_window` only. (Wire field name: `go_window`.)
 
 | Field | Type | Rules |
 |-------|------|--------|
