@@ -67,11 +67,12 @@ After implementation, run the focused checks added for:
 | Today after 20:00 UYT | Analysis window completed; no new best window |
 | Older data timestamp on later day | Labeled as data age/update, not false same-day refresh |
 
-## Implementation validation notes (2026-10-14)
+## Implementation validation notes (2026-10-15)
 
-- `scripts/check_report_presentation.py` — OK (labels, ordinal scores, narratives, bands, provisional/window-completed, incomplete≠few waves).
-- Fixture replay: `python -m surf_forecast fixtures replay fixtures\normal --now 2026-10-13T15:00:00-03:00` emits `schema_version` `1.1.0` with day/peak ratings, analysis, wind km/h pass-through, evolution samples.
-- Interactive TUI checklist above still recommended once on a real terminal (`python -m surf_forecast`).
+- `scripts/check_report_presentation.py` — OK (FR-017, `best_resolved_grade_map_v2` half-steps, narratives, bands, provisional/window-completed).
+- Window-completed today still exposes peak size/period/wind/condition; best window remains absent; analysis shows facts before limitations.
+- Visual craft continued under active feature `specs/004-tui-visual-craft/` (see that feature’s `graphic-layer.md`). This `003` quickstart is historical for the presentation 1.1.0 delivery.
+- Rebuild exe: `.\scripts\build-exe.ps1` then `.\surf-forecast.exe`.
 
 ## Stop conditions
 

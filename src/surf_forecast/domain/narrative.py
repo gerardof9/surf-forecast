@@ -23,32 +23,54 @@ def build_day_analysis(
     profiles: list[PeakProfile],
     sources_ok: bool = True,
 ) -> dict[str, Any]:
-    sentences: list[dict[str, str]] = []
+    facts: list[dict[str, str]] = []
+    interpretations: list[dict[str, str]] = []
+    limitations: list[dict[str, str]] = []
     profile_by_id = {p.peak_id: p for p in profiles}
 
-    if day.state is ForecastState.ANALYSIS_WINDOW_COMPLETED:
-        sentences.append(
-            {
-                "kind": "limitation",
-                "text": "La ventana de análisis de hoy (06:00–20:00 UYT) ya finalizó; no hay nueva mejor ventana para hoy.",
-            }
-        )
+    window_done = day.state is ForecastState.ANALYSIS_WINDOW_COMPLETED or day.headline_code == "analysis_window_completed"
 
-    if day.swell_trend is not None:
+    if day.swell_trend is not None and day.swell_trend.state.value != "unsupported":
         trend = _TREND_ES.get(day.swell_trend.state.value, day.swell_trend.state.value)
-        sentences.append({"kind": "fact", "text": f"Tendencia del oleaje en la ventana: {trend}."})
+        facts.append({"kind": "fact", "text": f"Tendencia del oleaje en la ventana: {trend}."})
 
     rotation = day.wind_rotation or {}
     if rotation:
         start_i = rotation.get("start_intensity")
         end_i = rotation.get("end_intensity")
         if start_i and end_i:
-            sentences.append(
-                {
-                    "kind": "fact",
-                    "text": f"Viento estimado de intensidad {start_i} al inicio hacia {end_i} al cierre de la ventana.",
-                }
-            )
+            if start_i == end_i:
+                facts.append(
+                    {
+                        "kind": "fact",
+                        "text": f"Viento estimado de intensidad {start_i} a lo largo de la ventana de análisis.",
+                    }
+                )
+            else:
+                facts.append(
+                    {
+                        "kind": "fact",
+                        "text": f"Viento estimado de intensidad {start_i} al inicio hacia {end_i} al cierre de la ventana.",
+                    }
+                )
+
+    sizes = [
+        peak.size
+        for peak in day.peaks
+        if peak.size is not None and peak.condition is not None
+    ]
+    if sizes:
+        lo = min(s.minimum_m for s in sizes)
+        hi = max(s.maximum_m for s in sizes)
+        facts.append(
+            {
+                "kind": "fact",
+                "text": (
+                    f"Tamaño surfeable estimado entre los picos evaluados: "
+                    f"aprox. {lo:.1f}–{hi:.1f} m (derivado; no es Hs cruda)."
+                ),
+            }
+        )
 
     best_ids = day.best_peak_ids or []
     for peak_id in best_ids[:2]:
@@ -56,30 +78,23 @@ def build_day_analysis(
         if profile is None:
             continue
         orient = _orientation_phrase(profile.orientation_deg)
-        sentences.append(
+        interpretations.append(
             {
                 "kind": "interpretation",
                 "text": f"{profile.name}: exposición orientada ~{orient} según perfil (no es un dato del modelo).",
             }
         )
 
-    sizes = [
-        peak.size
-        for peak in day.peaks
-        if peak.size is not None and peak.state is ForecastState.RESOLVED
-    ]
-    if sizes:
-        lo = min(s.minimum_m for s in sizes)
-        hi = max(s.maximum_m for s in sizes)
-        sentences.append(
+    if window_done:
+        limitations.append(
             {
-                "kind": "fact",
-                "text": f"Tamaño surfeable estimado entre los picos evaluados: aprox. {lo:.1f}–{hi:.1f} m (derivado; no es Hs cruda).",
+                "kind": "limitation",
+                "text": "La ventana de análisis de hoy (06:00–20:00 UYT) ya finalizó; no se propone una nueva mejor hora de entrada.",
             }
         )
 
     if any(p.status is ProfileStatus.PROVISIONAL for p in profiles):
-        sentences.append(
+        limitations.append(
             {
                 "kind": "limitation",
                 "text": "Hay perfiles provisionales: la interpretación de exposición no está calibrada en campo.",
@@ -87,7 +102,7 @@ def build_day_analysis(
         )
 
     if not sources_ok:
-        sentences.append(
+        limitations.append(
             {
                 "kind": "limitation",
                 "text": "Fuentes incompletas o degradadas: el análisis se basa solo en lo disponible.",
@@ -95,24 +110,23 @@ def build_day_analysis(
         )
 
     if not day.peaks:
-        sentences.append(
+        limitations.append(
             {
                 "kind": "limitation",
                 "text": "No hay picos evaluables para este día con los datos actuales.",
             }
         )
-    elif not any(s["kind"] == "fact" for s in sentences) and not any(
-        s["kind"] == "interpretation" for s in sentences
-    ):
-        if not any(s["kind"] == "limitation" for s in sentences):
-            sentences.append(
-                {
-                    "kind": "limitation",
-                    "text": "Datos insuficientes para un análisis del día con hechos respaldados.",
-                }
-            )
+    elif not facts and not interpretations:
+        limitations.append(
+            {
+                "kind": "limitation",
+                "text": "Datos insuficientes para un análisis del día con hechos respaldados.",
+            }
+        )
 
-    supported = any(s["kind"] in {"fact", "interpretation"} for s in sentences)
+    # Facts and interpretations first; limitations last (secondary weight).
+    sentences = facts + interpretations + limitations
+    supported = bool(facts or interpretations)
     text = " ".join(s["text"] for s in sentences)
     return {"text": text, "sentences": sentences, "supported": supported, "method": METHOD}
 
@@ -122,19 +136,21 @@ def build_peak_analysis(
     *,
     profile: PeakProfile | None,
 ) -> tuple[dict[str, Any] | None, str | None]:
-    sentences: list[dict[str, str]] = []
+    facts: list[dict[str, str]] = []
+    interpretations: list[dict[str, str]] = []
+    limitations: list[dict[str, str]] = []
 
-    if peak.state in {ForecastState.INCOMPLETE_FORECAST, ForecastState.ANALYSIS_WINDOW_COMPLETED}:
+    if peak.state is ForecastState.INCOMPLETE_FORECAST and peak.condition is None and peak.size is None:
         return None, "Hechos del pico insuficientes para un análisis."
 
     if peak.condition is not None:
         from surf_forecast.domain.presentation import CONDITION_LABELS
 
         label = CONDITION_LABELS.get(peak.condition.value, peak.condition.value)
-        sentences.append({"kind": "fact", "text": f"Condición estimada del pico: {label}."})
+        facts.append({"kind": "fact", "text": f"Condición estimada del pico: {label}."})
 
     if peak.size is not None:
-        sentences.append(
+        facts.append(
             {
                 "kind": "fact",
                 "text": (
@@ -146,14 +162,14 @@ def build_peak_analysis(
 
     if profile is not None:
         orient = _orientation_phrase(profile.orientation_deg)
-        sentences.append(
+        interpretations.append(
             {
                 "kind": "interpretation",
                 "text": f"Perfil {profile.name}: orientación ~{orient}.",
             }
         )
         if profile.status is ProfileStatus.PROVISIONAL:
-            sentences.append(
+            limitations.append(
                 {
                     "kind": "limitation",
                     "text": "Perfil provisional: no tratar la exposición como calibrada.",
@@ -161,18 +177,23 @@ def build_peak_analysis(
             )
 
     if peak.state is ForecastState.UNCERTAIN:
-        sentences.append(
+        limitations.append(
             {
                 "kind": "limitation",
                 "text": "Estado incierto: el rango estimado cruza umbrales o faltan certezas.",
             }
         )
 
-    if not sentences:
-        return None, "Hechos del pico insuficientes para un análisis."
+    if "analysis_window_completed" in (peak.reason_codes or []):
+        limitations.append(
+            {
+                "kind": "limitation",
+                "text": "Ventana de análisis del día finalizada: no hay nueva mejor hora propuesta.",
+            }
+        )
 
-    supported = any(s["kind"] in {"fact", "interpretation"} for s in sentences)
-    if not supported:
+    sentences = facts + interpretations + limitations
+    if not facts and not interpretations:
         return None, "Hechos del pico insuficientes para un análisis."
 
     return {

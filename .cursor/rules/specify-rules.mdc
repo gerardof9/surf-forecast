@@ -5,5 +5,8 @@ alwaysApply: true
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/003-tui-redesign/plan.md`.
+`specs/004-tui-visual-craft/plan.md`.
+
+Binding graphic contract: `specs/004-tui-visual-craft/graphic-layer.md`.
+Active Spec Kit feature directory: `specs/004-tui-visual-craft` only.
 <!-- SPECKIT END -->

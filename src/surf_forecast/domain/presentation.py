@@ -185,8 +185,10 @@ def _peak_out(
             "support": peak.best_window.support,
         }
     wind_dir, wind_speed, wind_intensity = representative_wind(peak)
+    period_s = _representative_period(peak)
     peak_analysis, peak_absent = build_peak_analysis(peak, profile=profile)
     display_name = profile.name if profile else peak.peak_id.replace("_", " ").title()
+    window_done = "analysis_window_completed" in (peak.reason_codes or []) or peak.state is ForecastState.ANALYSIS_WINDOW_COMPLETED
     return {
         "peak_id": peak.peak_id,
         "display_name": display_name,
@@ -194,6 +196,7 @@ def _peak_out(
         "condition": condition,
         "condition_label": condition_or_state_label(condition, peak.state),
         "size": peak.size.to_dict() if peak.size else None,
+        "period_s": period_s,
         "best_window": window,
         "confidence": peak.confidence.to_dict(),
         "reason_codes": peak.reason_codes,
@@ -205,6 +208,7 @@ def _peak_out(
         "wind_dir_label": wind_dir,
         "wind_speed_kmh": wind_speed,
         "wind_intensity": wind_intensity,
+        "window_completed": window_done,
         "evolution_samples": sample_evolution(peak),
         "reference_slots": [
             {
@@ -213,6 +217,7 @@ def _peak_out(
                 "state": slot.state.value,
                 "condition": slot.condition_grade.value if slot.condition_grade else None,
                 "size_point_m": slot.size.point_m if slot.size else None,
+                "period_s": slot.period_s,
                 "wind_intensity": slot.wind.intensity.value if slot.wind else None,
                 "wind_class": slot.wind.relative_class.value if slot.wind else None,
                 "wind_speed_kmh": slot.wind.speed_kmh if slot.wind else None,
@@ -223,6 +228,13 @@ def _peak_out(
             for slot in peak.reference_slots
         ],
     }
+
+
+def _representative_period(peak: PeakDayForecast) -> float | None:
+    for slot in peak.reference_slots:
+        if slot.period_s is not None:
+            return slot.period_s
+    return None
 
 
 def _display_title(local_date: str) -> str:

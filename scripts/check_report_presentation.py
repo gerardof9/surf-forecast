@@ -84,14 +84,37 @@ def _check_ordinal_scores() -> list[str]:
         SurfGrade.VERY_GOOD: 5.0,
     }
     failures = []
-    if METHOD != "best_resolved_grade_map_v1":
+    if METHOD != "best_resolved_grade_map_v2":
         failures.append(f"METHOD={METHOD!r}")
     for grade, score in expected.items():
         got = score_for_grade(grade)
         if got != score or got != GRADE_TO_SCORE[grade]:
             failures.append(f"score_for_grade({grade})={got}")
-        if got is not None and got % 1 != 0:
-            failures.append(f"v1 must be whole points: {grade}->{got}")
+    # Half-step path: provisional/low confidence adjusts by -0.5
+    from surf_forecast.domain.day_rating import build_peak_rating
+    from surf_forecast.domain.models import (
+        ConfidenceAssessment,
+        ConfidenceLevel,
+        ForecastState,
+        PeakDayForecast,
+        SurfGrade,
+    )
+
+    peak = PeakDayForecast(
+        peak_id="x",
+        local_date="2026-10-14",
+        state=ForecastState.RESOLVED,
+        condition=SurfGrade.GOOD,
+        size=None,
+        best_window=None,
+        confidence=ConfidenceAssessment(
+            level=ConfidenceLevel.MEDIUM, caps=["provisional_profile"], degradations=[]
+        ),
+        reason_codes=[],
+    )
+    rating = build_peak_rating(peak)
+    if not rating or rating["score"] != 3.5:
+        failures.append(f"provisional half-step expected 3.5, got {rating}")
     return failures
 
 

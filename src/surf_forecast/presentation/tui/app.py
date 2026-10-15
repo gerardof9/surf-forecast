@@ -15,25 +15,72 @@ from surf_forecast.presentation.tui.screens import DailyReportScreen, HelpScreen
 
 class SurfForecastApp(App):
     CSS = """
-    Screen { layout: vertical; }
-    #report-header { height: auto; max-height: 2; padding: 0 1; color: cyan; }
+    Screen { layout: vertical; background: #0b1220; color: #fffbf6; }
+    #report-header {
+        height: auto;
+        max-height: 3;
+        padding: 0 1;
+        color: #00a2fa;
+        text-style: bold;
+        border-bottom: solid #00a2fa;
+    }
+    .day-title {
+        text-style: bold;
+        color: #00a2fa;
+        height: 1;
+        margin-top: 1;
+    }
     #main { height: 1fr; layout: horizontal; }
     #main.narrow { layout: vertical; }
-    #days-rail { width: 28; min-width: 18; border-right: solid $primary; padding: 0 1; }
-    #main.narrow #days-rail { width: 1fr; height: auto; max-height: 12; border-right: none; border-bottom: solid $primary; }
+    #main.medium #legend-rail { display: none; }
+
+    #days-rail {
+        width: 26;
+        min-width: 20;
+        padding: 0 1;
+    }
+    #main.narrow #days-rail {
+        width: 1fr;
+        height: auto;
+        max-height: 10;
+    }
     #day-list { height: 1fr; }
-    #legend { height: auto; color: $text-muted; padding: 1 0; }
-    #main.narrow #legend { display: none; }
+    #day-list > .list--highlight { background: #00a2fa; color: #0b1220; }
+
     #report-body { width: 1fr; padding: 0 1; height: 1fr; }
-    .section-title { text-style: bold; color: cyan; margin-top: 1; }
-    #day-analysis { height: auto; min-height: 3; }
-    #peak-cards { height: auto; }
+    #legend-rail {
+        width: 28;
+        padding: 0 1;
+    }
+    #main.narrow #legend-rail { display: none; }
+
+    .muted { color: #888888; }
+
+    #analysis-row { height: auto; min-height: 8; layout: horizontal; }
+    #day-analysis { width: 2fr; }
+    #day-rating { width: 1fr; min-width: 24; }
+    #main.narrow #analysis-row { layout: vertical; }
+    #main.narrow #day-rating { width: 1fr; min-width: 0; }
+
+    #peak-grid {
+        grid-size: 5;
+        grid-gutter: 1 1;
+        height: auto;
+        margin-top: 1;
+        margin-bottom: 1;
+    }
+    #peak-grid.cols-1 { grid-size: 1; }
+    #peak-grid.cols-3 { grid-size: 3; }
+    #peak-grid.cols-5 { grid-size: 5; }
+
     #detail-body { padding: 0 1; height: 1fr; }
-    #status { height: 1; }
-    #help-body { padding: 1 2; }
+    #detail-zones { height: auto; layout: horizontal; }
+    #detail-summary { width: 1fr; }
+    #detail-center { width: 2fr; }
+    #detail-meta { width: 1fr; }
+    #help-frame { margin: 2 4; width: auto; }
     """
     TITLE = "SURF · LA PALOMA"
-    # Set False in tests (thread workers unsupported under run_test).
     auto_query_on_mount = True
 
     def on_mount(self) -> None:
@@ -48,7 +95,7 @@ class SurfForecastApp(App):
                 self.forecast_screen.query_one("#status").show(status)
             except Exception:
                 pass
-        self.run_worker(self._load(mode), exclusive=True, thread=True, name="forecast")
+        self.run_worker(lambda: self._load(mode), exclusive=True, thread=True, name="forecast")
 
     def _load(self, mode: QueryMode) -> dict:
         request = QueryRequest(
@@ -79,17 +126,16 @@ class SurfForecastApp(App):
         result = event.worker.result
         if not result:
             return
-        status = "Consulta completa"
+        status = "Datos disponibles"
         if result["code"] == 1:
             status = "Consulta degradada"
         if result["mode"] == "stored_only":
             status = "Solo datos guardados"
         self.forecast_screen.show_payload(result["payload"], status)
-        # Refresh open detail screen if present.
         for screen in self.screen_stack:
             if isinstance(screen, PeakDetailScreen):
                 screen.payload = result["payload"]
-                screen._render()
+                screen._populate()
 
     def action_refresh(self) -> None:
         self.run_query(QueryMode.FORCE_REFRESH, "Actualizando datos…")

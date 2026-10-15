@@ -6,26 +6,38 @@ from typing import Any
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
+from textual.widgets import Footer, Label, ListItem, ListView, Static
 
 from surf_forecast.paths import config_dir
-from surf_forecast.presentation.tui.widgets import (
-    FR017_LEGEND,
-    SHARED_GRID,
-    SECTION_PEAKS,
+from surf_forecast.presentation.tui.components import (
+    AnalysisPanel,
+    Banner,
+    BestWindowCallout,
+    EvolutionTable,
+    Frame,
+    PeakCard,
+    RatingHero,
     StatusBar,
     TechnicalDetails,
-    format_analysis_block,
-    format_header,
-    format_peak_card,
-    format_rating_line,
+    header_text,
+    window_completed_banner,
 )
+from surf_forecast.presentation.tui.formatters import (
+    format_confidence,
+    format_day_chip,
+    format_period_s,
+    format_score_num,
+    format_size_dict,
+    format_stars,
+    format_wind,
+)
+from surf_forecast.presentation.tui.theme import LEGEND_LINES, SECTION_PEAKS, SHARED_GRID
 
 
 class DailyReportScreen(Screen):
-    """View A — daily surf report."""
+    """View A — daily surf report board."""
 
     BINDINGS = [
         Binding("up", "day_prev", "Día↑", show=True),
@@ -47,21 +59,21 @@ class DailyReportScreen(Screen):
         self._status_text = "Iniciando…"
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=False)
-        yield Static("", id="report-header")
+        yield Static("", id="report-header", markup=False)
         with Horizontal(id="main"):
             with Vertical(id="days-rail"):
-                yield Static("DÍAS", classes="section-title")
+                yield Frame("DÍAS", "", id="days-frame")
                 yield ListView(id="day-list")
-                yield Static(FR017_LEGEND, id="legend")
             with VerticalScroll(id="report-body"):
-                yield Static("", id="day-title", classes="section-title")
-                yield Static("ANÁLISIS DEL DÍA", classes="section-title")
-                yield Static("", id="day-analysis")
-                yield Static("VALORACIÓN DEL DÍA", classes="section-title")
-                yield Static("", id="day-rating")
-                yield Static(SECTION_PEAKS, classes="section-title")
-                yield Static("", id="peak-cards")
+                yield Static("", id="day-title", classes="day-title", markup=False)
+                yield Banner("", id="day-banner")
+                with Horizontal(id="analysis-row"):
+                    yield AnalysisPanel("ANÁLISIS DEL DÍA", id="day-analysis")
+                    yield RatingHero("VALORACIÓN DEL DÍA", id="day-rating")
+                yield Static(SECTION_PEAKS, classes="day-title", markup=False)
+                yield Grid(id="peak-grid")
+            with Vertical(id="legend-rail"):
+                yield Frame("LEYENDA", "\n".join(LEGEND_LINES) + "\n\n" + SHARED_GRID, id="legend-frame")
         yield StatusBar(self._status_text, id="status")
         yield Footer()
 
@@ -74,10 +86,17 @@ class DailyReportScreen(Screen):
 
     def _apply_width(self, width: int) -> None:
         main = self.query_one("#main")
+        grid = self.query_one("#peak-grid", Grid)
+        main.remove_class("narrow", "medium")
+        grid.remove_class("cols-1", "cols-2", "cols-3", "cols-5")
         if width < 90:
             main.add_class("narrow")
+            grid.add_class("cols-1")
+        elif width < 130:
+            main.add_class("medium")
+            grid.add_class("cols-3")
         else:
-            main.remove_class("narrow")
+            grid.add_class("cols-5")
 
     def show_payload(self, payload: dict[str, Any], status: str) -> None:
         self.payload = payload
@@ -85,7 +104,7 @@ class DailyReportScreen(Screen):
         self.day_index = min(self.day_index, max(0, len(payload.get("days") or []) - 1))
         self.peak_index = 0
         self._populate_days()
-        self._render_day()
+        self._populate_day()
         self.query_one("#status", StatusBar).show(status)
 
     def _populate_days(self) -> None:
@@ -93,10 +112,7 @@ class DailyReportScreen(Screen):
         lst = self.query_one("#day-list", ListView)
         lst.clear()
         for day in days:
-            title = day.get("display_title") or day.get("local_date")
-            rating = day.get("day_rating")
-            chip = f"{rating['score']:.0f}/5" if rating else "—"
-            lst.append(ListItem(Label(f"{title}  {chip}")))
+            lst.append(ListItem(Label(format_day_chip(day))))
         if days:
             lst.index = self.day_index
 
@@ -107,7 +123,7 @@ class DailyReportScreen(Screen):
         self.day_index = max(0, min(self.day_index, len(days) - 1))
         return days[self.day_index]
 
-    def _render_day(self) -> None:
+    def _populate_day(self) -> None:
         payload = self.payload or {}
         day = self._current_day()
         query = payload.get("query") or {}
@@ -117,41 +133,42 @@ class DailyReportScreen(Screen):
         data_times = payload.get("data_times") or {}
         query_times = payload.get("query_times") or {}
         self.query_one("#report-header", Static).update(
-            format_header(
+            header_text(
                 data_updated=data_times.get("meteorological_updated_at_local"),
                 query_local=query_times.get("executed_at_local"),
                 status=self._status_text,
-                horizon=horizon,
+                horizon=horizon or "hoy + 4 días",
             )
         )
         if not day:
             self.query_one("#day-title", Static).update("Sin días")
-            self.query_one("#day-analysis", Static).update("")
-            self.query_one("#day-rating", Static).update("Sin valoración")
-            self.query_one("#peak-cards", Static).update("")
+            self.query_one("#day-banner", Banner).set_text("")
+            self.query_one("#day-analysis", AnalysisPanel).set_analysis(None, absent="Sin análisis.")
+            self.query_one("#day-rating", RatingHero).set_rating(None, "Sin días")
+            self._populate_peak_grid([])
             return
-        self.query_one("#day-title", Static).update(day.get("display_title") or day.get("local_date") or "")
-        self.query_one("#day-analysis", Static).update(format_analysis_block(day.get("day_analysis")))
-        self.query_one("#day-rating", Static).update(
-            format_rating_line(day.get("day_rating"), day.get("day_rating_absent_reason"))
+
+        title = day.get("display_title") or day.get("local_date") or ""
+        self.query_one("#day-title", Static).update(title.upper())
+        self.query_one("#day-banner", Banner).set_text(window_completed_banner(day))
+        self.query_one("#day-analysis", AnalysisPanel).set_analysis(day.get("day_analysis"))
+        self.query_one("#day-rating", RatingHero).set_rating(
+            day.get("day_rating"), day.get("day_rating_absent_reason")
         )
+
         peaks = day.get("peaks") or []
         if peaks:
             self.peak_index = max(0, min(self.peak_index, len(peaks) - 1))
-        lines = [format_peak_card(p) for p in peaks]
-        rendered = []
-        for i, line in enumerate(lines):
-            mark = "▶ " if i == self.peak_index else "  "
-            rendered.append(mark + line.replace("\n", "\n   "))
-        self.query_one("#peak-cards", Static).update("\n\n".join(rendered) if rendered else "Sin picos")
+        self._populate_peak_grid(peaks)
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if event.list_view.id != "day-list":
+    def _populate_peak_grid(self, peaks: list[dict[str, Any]]) -> None:
+        grid = self.query_one("#peak-grid", Grid)
+        grid.remove_children()
+        if not peaks:
+            grid.mount(Static("Sin picos evaluables.", classes="muted", markup=False))
             return
-        if event.list_view.index is not None:
-            self.day_index = event.list_view.index
-            self.peak_index = 0
-            self._render_day()
+        for index, peak in enumerate(peaks):
+            grid.mount(PeakCard(peak, selected=index == self.peak_index))
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if event.list_view.id != "day-list":
@@ -159,7 +176,7 @@ class DailyReportScreen(Screen):
         if event.list_view.index is not None:
             self.day_index = event.list_view.index
             self.peak_index = 0
-            self._render_day()
+            self._populate_day()
 
     def action_day_prev(self) -> None:
         self._move_day(-1)
@@ -173,9 +190,8 @@ class DailyReportScreen(Screen):
             return
         self.day_index = max(0, min(len(days) - 1, self.day_index + delta))
         self.peak_index = 0
-        lst = self.query_one("#day-list", ListView)
-        lst.index = self.day_index
-        self._render_day()
+        self.query_one("#day-list", ListView).index = self.day_index
+        self._populate_day()
 
     def action_peak_prev(self) -> None:
         self._move_peak(-1)
@@ -191,7 +207,7 @@ class DailyReportScreen(Screen):
         if not peaks:
             return
         self.peak_index = max(0, min(len(peaks) - 1, self.peak_index + delta))
-        self._render_day()
+        self._populate_peak_grid(peaks)
 
     def action_open_detail(self) -> None:
         day = self._current_day()
@@ -210,7 +226,7 @@ class DailyReportScreen(Screen):
 
 
 class PeakDetailScreen(Screen):
-    """View B — peak detail with sampled evolution and collapsible technicals."""
+    """View B — three-zone peak detail board."""
 
     BINDINGS = [
         Binding("escape", "back", "Volver", show=True),
@@ -230,22 +246,21 @@ class PeakDetailScreen(Screen):
         self.peak_index = peak_index
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=False)
         with VerticalScroll(id="detail-body"):
-            yield Static("", id="detail-header", classes="section-title")
-            yield Static("", id="detail-summary")
-            yield Static("EVOLUCIÓN (muestras)", classes="section-title")
-            yield Static("", id="detail-evolution")
-            yield Static("MEJOR VENTANA ESTIMADA", classes="section-title")
-            yield Static("", id="detail-window")
-            yield Static("ANÁLISIS DEL PICO", classes="section-title")
-            yield Static("", id="detail-analysis")
+            yield Static("", id="detail-header", classes="day-title", markup=False)
+            with Horizontal(id="detail-zones"):
+                yield Frame("RESUMEN", "", id="detail-summary")
+                with Vertical(id="detail-center"):
+                    yield EvolutionTable(id="detail-evolution")
+                    yield BestWindowCallout(id="detail-window")
+                    yield AnalysisPanel("ANÁLISIS DEL PICO", id="detail-analysis")
+                yield Frame("NOTAS", "", id="detail-meta")
             yield TechnicalDetails(id="technical")
-        yield StatusBar("Detalle", id="status")
+        yield StatusBar("Detalle del pico · Esc vuelve al mismo día", id="status")
         yield Footer()
 
     def on_mount(self) -> None:
-        self._render()
+        self._populate()
 
     def _day(self) -> dict[str, Any] | None:
         days = self.payload.get("days") or []
@@ -264,119 +279,94 @@ class PeakDetailScreen(Screen):
         self.peak_index = max(0, min(self.peak_index, len(peaks) - 1))
         return peaks[self.peak_index]
 
-    def _render(self) -> None:
+    def _populate(self) -> None:
         day = self._day()
         peak = self._peak()
         if not day or not peak:
             self.query_one("#detail-header", Static).update("Sin pico")
             return
-        title = (
-            f"← {peak.get('display_name')} · {day.get('display_title')} · "
-            f"06:00–20:00 UYT · {peak.get('condition_label')}"
+        self.query_one("#detail-header", Static).update(
+            f"← {peak.get('display_name')}  ·  {day.get('display_title')}  ·  06:00–20:00 UYT"
         )
-        self.query_one("#detail-header", Static).update(title)
 
-        size = peak.get("size") or {}
-        size_txt = (
-            f"{size.get('minimum_m', '—')}–{size.get('maximum_m', '—')} m"
-            if size
-            else "tamaño n/d"
+        size_txt = format_size_dict(peak.get("size"))
+        period_txt = format_period_s(peak.get("period_s"))
+        wind_txt = format_wind(
+            dir_label=peak.get("wind_dir_label"),
+            intensity=peak.get("wind_intensity"),
+            speed_kmh=peak.get("wind_speed_kmh"),
         )
-        wind_bits = []
-        if peak.get("wind_dir_label"):
-            wind_bits.append(str(peak["wind_dir_label"]))
-        if peak.get("wind_intensity"):
-            wind_bits.append(str(peak["wind_intensity"]))
-        if peak.get("wind_speed_kmh") is not None:
-            wind_bits.append(f"{peak['wind_speed_kmh']:.0f} km/h")
         rating = peak.get("peak_rating")
-        rating_txt = format_rating_line(rating) if rating else "Sin valoración de pico"
-        conf = (peak.get("confidence") or {}).get("level") or "—"
-        profile_note = ""
+        if rating:
+            rating_txt = (
+                f"{format_stars(float(rating['score']))} "
+                f"{format_score_num(float(rating['score']))} / 5"
+            )
+        else:
+            rating_txt = "Sin valoración de pico"
+        conf = format_confidence((peak.get("confidence") or {}).get("level"))
+        profile_note = "Perfil: —"
         for prof in self.payload.get("profiles") or []:
             if prof.get("peak_id") == peak.get("peak_id"):
                 profile_note = f"Perfil: {prof.get('status')}"
                 break
+
         summary = "\n".join(
             [
-                f"Condición: {peak.get('condition_label')}",
-                f"Tamaño surfeable estimado: {size_txt}",
-                f"Viento: {' '.join(wind_bits) or 'n/d'}",
+                f"● {peak.get('condition_label')}",
+                f"Tamaño: {size_txt}",
+                f"Período: {period_txt}",
+                f"Viento: {wind_txt}",
+                f"Valoración: {rating_txt}",
                 f"Confianza: {conf}",
-                rating_txt,
-                profile_note,
             ]
         )
-        self.query_one("#detail-summary", Static).update(summary)
-
-        samples = peak.get("evolution_samples") or []
-        if samples:
-            evo_lines = []
-            for sample in samples:
-                wind = []
-                if sample.get("wind_dir_label"):
-                    wind.append(str(sample["wind_dir_label"]))
-                if sample.get("wind_speed_kmh") is not None:
-                    wind.append(f"{sample['wind_speed_kmh']:.0f} km/h")
-                if sample.get("wind_intensity"):
-                    wind.append(str(sample["wind_intensity"]))
-                size_p = sample.get("size_point_m")
-                size_s = f"{size_p:.1f} m" if size_p is not None else "—"
-                flag = " (incierto/incompleto)" if sample.get("incomplete_or_uncertain") else ""
-                evo_lines.append(
-                    f"{sample.get('band')}: {sample.get('local_hour')}  {size_s}  "
-                    f"{' '.join(wind)}  {sample.get('condition_label') or ''}{flag}"
-                )
-            self.query_one("#detail-evolution", Static).update("\n".join(evo_lines))
-        else:
-            self.query_one("#detail-evolution", Static).update("Sin muestras en la ventana de análisis.")
-
-        window = peak.get("best_window")
-        if window:
-            self.query_one("#detail-window", Static).update(
-                f"{window.get('start_at')} – {window.get('end_at')}  "
-                f"({window.get('duration_minutes')} min, {window.get('condition')})"
+        self.query_one("#detail-summary", Frame).set_body(summary)
+        self.query_one("#detail-meta", Frame).set_body(
+            "\n".join(
+                [
+                    profile_note,
+                    SHARED_GRID,
+                    "Hs del modelo ≠ altura de rompiente.",
+                ]
             )
-        else:
-            self.query_one("#detail-window", Static).update(
-                "No hay una ventana clara respaldada por el motor para este pico."
-            )
-
+        )
+        self.query_one("#detail-evolution", EvolutionTable).set_samples(peak.get("evolution_samples"))
+        self.query_one("#detail-window", BestWindowCallout).set_window(peak.get("best_window"))
         analysis = peak.get("peak_analysis")
-        if analysis:
-            self.query_one("#detail-analysis", Static).update(format_analysis_block(analysis))
-        else:
-            reason = peak.get("peak_analysis_absent_reason") or "Sin análisis de pico."
-            self.query_one("#detail-analysis", Static).update(reason)
+        absent = peak.get("peak_analysis_absent_reason") or "Sin análisis de pico."
+        self.query_one("#detail-analysis", AnalysisPanel).set_analysis(analysis, absent=absent)
 
         tech = self.query_one("#technical", TechnicalDetails)
         tech.collapse()
         tech.set_body(self._technical_body(peak))
+        self.query_one("#status", StatusBar).show(
+            f"Detalle · {peak.get('display_name')} · Esc volver"
+        )
 
     def _technical_body(self, peak: dict[str, Any]) -> str:
         size = peak.get("size") or {}
         criteria = self.payload.get("criteria") or {}
         data_times = self.payload.get("data_times") or {}
+        query_times = self.payload.get("query_times") or {}
+        # Higher precision OK in technical pane
         lines = [
             f"Snapshot: {self.payload.get('snapshot_id')}",
-            f"Criterios: {criteria.get('criteria_version')}  k={criteria.get('point_k')} "
-            f"[{criteria.get('range_k_low')}–{criteria.get('range_k_high')}]",
-            f"Hs cruda: {size.get('raw_hs_m')}  → tamaño derivado punto: {size.get('point_m')} m",
-            f"Rango derivado: {size.get('minimum_m')}–{size.get('maximum_m')} m  método: {size.get('method')}",
-            f"Datos: {data_times.get('meteorological_updated_at_local') or 'No disponible'}",
+            f"Criterios: {criteria.get('criteria_version')}  k={criteria.get('point_k')}",
+            f"Hs cruda: {size.get('raw_hs_m')}  → derivado: {size.get('point_m')}",
+            f"Rango derivado: {size.get('minimum_m')}–{size.get('maximum_m')}",
+            f"Datos meteorológicos: {data_times.get('meteorological_updated_at_local') or 'No disponible'}",
+            f"Consulta: {query_times.get('executed_at_local') or '—'}",
             SHARED_GRID,
         ]
         for source in self.payload.get("sources") or []:
             lines.append(
                 f"Fuente {source.get('source_id')}: {source.get('model')} "
-                f"status={source.get('status')} edad={source.get('data_age_seconds')}s "
-                f"corrida={source.get('model_run_availability')}"
+                f"status={source.get('status')} edad={source.get('data_age_seconds')}s"
             )
         conf = peak.get("confidence") or {}
         if conf.get("caps") or conf.get("degradations"):
             lines.append(f"Confianza caps={conf.get('caps')} degradations={conf.get('degradations')}")
-        lines.append(f"Códigos: {', '.join(peak.get('reason_codes') or []) or '—'}")
-        lines.append("Hs del modelo no es la altura de rompiente en playa.")
         return "\n".join(lines)
 
     def action_back(self) -> None:
@@ -384,7 +374,7 @@ class PeakDetailScreen(Screen):
         if report is not None:
             report.day_index = self.day_index
             report.peak_index = self.peak_index
-            report._render_day()
+            report._populate_day()
         self.app.pop_screen()
 
     def action_toggle_tech(self) -> None:
@@ -404,7 +394,7 @@ class PeakDetailScreen(Screen):
         if not peaks:
             return
         self.peak_index = max(0, min(len(peaks) - 1, self.peak_index + delta))
-        self._render()
+        self._populate()
 
 
 class HelpScreen(ModalScreen):
@@ -415,26 +405,25 @@ class HelpScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         path = config_dir() / "peaks.json"
-        yield Vertical(
-            Static(
-                "\n".join(
-                    [
-                        "Ayuda — SURF · LA PALOMA",
-                        "",
-                        "↑↓ cambiar día   ←→ pico   Enter detalle   Esc volver",
-                        "D detalles técnicos (en detalle)   R actualizar   o solo guardado   Q salir",
-                        "",
-                        "La valoración 1–5 es una codificación ordinal del grado del motor,",
-                        "no una probabilidad ni un skill score calibrado.",
-                        "",
-                        f"Vocabulario: {FR017_LEGEND}",
-                        "",
-                        "Hs del modelo ≠ altura de rompiente. k × Hs es provisional.",
-                        SHARED_GRID,
-                        f"Perfiles (solo archivo, sin pantalla): {path}",
-                        "Datos: Open-Meteo (CC BY 4.0)  https://open-meteo.com/",
-                    ]
-                ),
-                id="help-body",
-            )
+        body = "\n".join(
+            [
+                "Ayuda — SURF · LA PALOMA",
+                "",
+                "Navegación:  ↑↓ día   ←→ pico   Enter detalle   Esc volver",
+                "Acciones:    R actualizar   o solo guardado   D técnicos   Q salir",
+                "",
+                "Foco primario: lista de días. ←→ selecciona pico (no quita el foco).",
+                "",
+                "La valoración 1–5 (pasos 0,5) es una codificación ordinal del grado",
+                "del motor con ajuste de confianza/perfil; no es una probabilidad.",
+                "",
+                "LEYENDA",
+                *LEGEND_LINES,
+                "",
+                "Hs del modelo ≠ altura de rompiente. k × Hs es provisional.",
+                SHARED_GRID,
+                f"Perfiles (archivo): {path}",
+                "Datos: Open-Meteo (CC BY 4.0)",
+            ]
         )
+        yield Frame("AYUDA", body, id="help-frame", focused=True)

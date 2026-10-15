@@ -51,6 +51,14 @@ def slot_in_analysis_window(valid_at: datetime, local_date: str, reference: date
     return start <= local.time() < ANALYSIS_END
 
 
+def slot_in_calendar_analysis_window(valid_at: datetime, local_date: str) -> bool:
+    """Full 06:00–20:00 UYT for the calendar day (ignores remaining-from-now)."""
+    local = valid_at.astimezone(URUGUAY_TZ)
+    if local.date().isoformat() != local_date:
+        return False
+    return ANALYSIS_START <= local.time() < ANALYSIS_END
+
+
 def native_step_minutes(times: list[datetime]) -> int | None:
     if len(times) < 2:
         return 60

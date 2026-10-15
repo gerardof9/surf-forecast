@@ -39,13 +39,13 @@ Extends `001` presentation with:
 
 | Field | Type | Rules |
 |-------|------|-------|
-| `score` | number | Scale admits 0.5 steps on [1.0, 5.0]; **v1 MUST emit whole points only** `{1.0, 2.0, 3.0, 4.0, 5.0}` via ordinal `SurfGrade` map — never a multi-factor recomputation |
-| `source_peak_id` | string | Best resolved peak used |
+| `score` | number | Scale admits 0.5 steps on [1.0, 5.0] via `best_resolved_grade_map_v2`: base ordinal `SurfGrade` map, then −0.5 when source peak has low confidence or `provisional_profile` cap (floor 1.0) — never a multi-factor meteorology recomputation |
+| `source_peak_id` | string | Best resolved-grade peak used |
 | `caption` | string/null | Optional qualitative caption consistent with score |
-| `method` | string | MUST be `best_resolved_grade_map_v1` for this feature |
+| `method` | string | MUST be `best_resolved_grade_map_v2` for this feature |
 | `glyph_steps` | number | Same numeric value for star renderer |
 
-**Validation**: `glyph_steps == score`. Never emit score for uncertain/incomplete/analysis_window_completed peaks as source. Presentation MUST NOT re-score size/wind/period/direction.
+**Validation**: `glyph_steps == score`. Peaks without a condition grade must not source the day rating. Window-completed today may still rate from evaluated grades; best window stays absent. Presentation MUST NOT re-score size/wind/period/direction.
 
 ### PeakReport (extends peak object)
 

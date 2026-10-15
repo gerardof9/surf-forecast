@@ -47,6 +47,7 @@ def sample_evolution(peak: PeakDayForecast) -> list[dict[str, Any]]:
                 "band": name,
                 "local_hour": slot.valid_at.astimezone(URUGUAY_TZ).strftime("%H:%M"),
                 "size_point_m": slot.size.point_m if slot.size else None,
+                "period_s": slot.period_s,
                 "wind_dir_label": direction_label(wind.direction_deg) if wind else None,
                 "wind_speed_kmh": wind.speed_kmh if wind else None,
                 "wind_intensity": wind.intensity.value if wind else None,

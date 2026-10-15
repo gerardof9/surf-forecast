@@ -37,6 +37,7 @@ from surf_forecast.domain.windows import (
     part_of_day_label,
     select_best_window,
     slot_in_analysis_window,
+    slot_in_calendar_analysis_window,
 )
 
 
@@ -161,11 +162,13 @@ def evaluate_slot(
             condition_grade=None,
             state=ForecastState.INCOMPLETE_FORECAST,
             reason_codes=["missing_required_input"],
+            period_s=None,
         )
     size = size_estimate(marine.wave_height_m, criteria)
     state, ceiling = ceiling_from_size(size, criteria)
     swell_label, swell_class = swell_quality(marine.swell_direction_deg or marine.wave_direction_deg, profile)
-    period_label, period_class = period_quality(marine.swell_period_s or marine.wave_period_s, profile)
+    period_s = marine.swell_period_s if marine.swell_period_s is not None else marine.wave_period_s
+    period_label, period_class = period_quality(period_s, profile)
     relative = (
         wind_relative(wind.direction_deg, profile) if wind.direction_deg is not None else WindRelative.UNKNOWN
     )
@@ -214,6 +217,7 @@ def evaluate_slot(
         condition_grade=grade,
         state=state,
         reason_codes=reasons,
+        period_s=period_s,
     )
 
 
@@ -267,50 +271,35 @@ def evaluate_forecast(
     days: list[DaySummary] = []
     complete_profiles = [profile for profile in profiles if not profile.validation_errors and profile.status.value != "incomplete"]
     for local_date in dates:
-        if is_today(local_date, request.reference_time) and analysis_window_completed(request.reference_time):
-            peaks = [
-                PeakDayForecast(
-                    peak_id=profile.peak_id,
-                    local_date=local_date,
-                    state=ForecastState.ANALYSIS_WINDOW_COMPLETED,
-                    condition=None,
-                    size=None,
-                    best_window=None,
-                    confidence=assess(
-                        profile=profile,
-                        state=ForecastState.ANALYSIS_WINDOW_COMPLETED,
-                        fetches=fetches,
-                        independence_groups=independence_groups,
-                    ),
-                    reason_codes=["analysis_window_completed"],
-                )
-                for profile in complete_profiles
-            ]
-            days.append(
-                DaySummary(
-                    local_date=local_date,
-                    state=ForecastState.ANALYSIS_WINDOW_COMPLETED,
-                    headline="Ventana de análisis finalizada",
-                    headline_code="analysis_window_completed",
-                    best_peak_ids=[],
-                    swell_trend=None,
-                    wind_rotation=None,
-                    peaks=peaks,
-                )
-            )
-            continue
+        # After 20:00 UYT today: still evaluate the full day's slots for display/rating,
+        # but never invent a new best window (FR window-completed).
+        window_done = is_today(local_date, request.reference_time) and analysis_window_completed(
+            request.reference_time
+        )
         day_marine = [
             hour
             for hour in marine_hours
-            if slot_in_analysis_window(hour.valid_at, local_date, request.reference_time)
+            if (
+                slot_in_calendar_analysis_window(hour.valid_at, local_date)
+                if window_done
+                else slot_in_analysis_window(hour.valid_at, local_date, request.reference_time)
+            )
         ]
         trend = swell_trend(day_marine, criteria)
         peaks: list[PeakDayForecast] = []
         for profile in profiles:
             if profile.validation_errors or profile.status.value == "incomplete":
                 continue
-            slots = _slots_for_day(profile, local_date, request, criteria, marine_by_hour, wind_by_hour)
-            window = None if (step and step != 60) else select_best_window(slots, step)
+            slots = _slots_for_day(
+                profile,
+                local_date,
+                request,
+                criteria,
+                marine_by_hour,
+                wind_by_hour,
+                full_day=window_done,
+            )
+            window = None if window_done or (step and step != 60) else select_best_window(slots, step)
             day_state, condition, size, reasons = _day_condition(slots, window, step)
             if step and step != 60:
                 reasons.append("unsupported_temporal_resolution")
@@ -322,6 +311,8 @@ def evaluate_forecast(
                 fetches=fetches,
                 independence_groups=independence_groups,
             )
+            if window_done:
+                reasons.append("analysis_window_completed")
             peaks.append(
                 PeakDayForecast(
                     peak_id=profile.peak_id,
@@ -329,7 +320,7 @@ def evaluate_forecast(
                     state=day_state,
                     condition=condition,
                     size=size,
-                    best_window=window,
+                    best_window=None if window_done else window,
                     confidence=confidence,
                     reason_codes=sorted(set(reasons)),
                     reference_slots=_reference_slots(slots, local_date, request.reference_time),
@@ -342,9 +333,21 @@ def evaluate_forecast(
             best_ids = [peak.peak_id for peak in resolved if peak.condition == best_grade]
         for peak in peaks:
             peak.highlighted = peak.peak_id in best_ids
-        rotation = _wind_rotation(slots=None, wind_hours=wind_hours, local_date=local_date, request=request, criteria=criteria, profiles=complete_profiles)
-        headline, code = _headline(peaks, best_ids)
-        day_state = _rollup_state(peaks)
+        rotation = _wind_rotation(
+            slots=None,
+            wind_hours=wind_hours,
+            local_date=local_date,
+            request=request,
+            criteria=criteria,
+            profiles=complete_profiles,
+            full_day=window_done,
+        )
+        if window_done:
+            headline, code = "Ventana de análisis finalizada", "analysis_window_completed"
+            day_state = ForecastState.ANALYSIS_WINDOW_COMPLETED
+        else:
+            headline, code = _headline(peaks, best_ids)
+            day_state = _rollup_state(peaks)
         days.append(
             DaySummary(
                 local_date=local_date,
@@ -360,11 +363,25 @@ def evaluate_forecast(
     return days
 
 
-def _slots_for_day(profile, local_date, request, criteria, marine_by_hour, wind_by_hour) -> list[SlotEvaluation]:
+def _slots_for_day(
+    profile,
+    local_date,
+    request,
+    criteria,
+    marine_by_hour,
+    wind_by_hour,
+    *,
+    full_day: bool = False,
+) -> list[SlotEvaluation]:
     keys = sorted(set(marine_by_hour) | set(wind_by_hour))
     slots: list[SlotEvaluation] = []
     for when in keys:
-        if not slot_in_analysis_window(when, local_date, request.reference_time):
+        in_window = (
+            slot_in_calendar_analysis_window(when, local_date)
+            if full_day
+            else slot_in_analysis_window(when, local_date, request.reference_time)
+        )
+        if not in_window:
             continue
         slots.append(
             evaluate_slot(
@@ -432,11 +449,16 @@ def _rollup_state(peaks: list[PeakDayForecast]) -> ForecastState:
     return ForecastState.INCOMPLETE_FORECAST
 
 
-def _wind_rotation(*, slots, wind_hours, local_date, request, criteria, profiles):
+def _wind_rotation(*, slots, wind_hours, local_date, request, criteria, profiles, full_day: bool = False):
     in_window = [
         hour
         for hour in wind_hours
-        if slot_in_analysis_window(hour.valid_at, local_date, request.reference_time) and hour.speed_kmh is not None
+        if hour.speed_kmh is not None
+        and (
+            slot_in_calendar_analysis_window(hour.valid_at, local_date)
+            if full_day
+            else slot_in_analysis_window(hour.valid_at, local_date, request.reference_time)
+        )
     ]
     if len(in_window) < 2:
         return None
