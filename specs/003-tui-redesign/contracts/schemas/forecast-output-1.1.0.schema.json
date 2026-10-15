@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surf-forecast.local/schemas/forecast-output-1.1.0.json",
+  "title": "Surf Forecast Output 1.1.0 (additive report fields)",
+  "description": "Documents additive presentation fields for 003-tui-redesign. Engine thresholds unchanged. Extends 001 forecast-output 1.0.0.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "const": "1.1.0" },
+    "query_times": {
+      "type": "object",
+      "properties": {
+        "executed_at_local": { "type": "string" }
+      }
+    },
+    "data_times": {
+      "type": "object",
+      "properties": {
+        "meteorological_updated_at_local": { "type": ["string", "null"] },
+        "label": { "type": "string" }
+      }
+    },
+    "days": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "display_title": { "type": "string" },
+          "day_rating": {
+            "type": ["object", "null"],
+            "properties": {
+              "score": { "type": "number", "enum": [1.0, 2.0, 3.0, 4.0, 5.0] },
+              "source_peak_id": { "type": "string" },
+              "caption": { "type": ["string", "null"] },
+              "method": { "const": "best_resolved_grade_map_v1" },
+              "glyph_steps": { "type": "number" }
+            },
+            "required": ["score", "source_peak_id", "method", "glyph_steps"]
+          },
+          "day_rating_absent_reason": { "type": ["string", "null"] },
+          "day_analysis": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "sentences": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": { "enum": ["fact", "interpretation", "limitation"] },
+                    "text": { "type": "string" }
+                  },
+                  "required": ["kind", "text"]
+                }
+              },
+              "supported": { "type": "boolean" },
+              "method": { "type": "string" }
+            },
+            "required": ["text", "sentences", "supported", "method"]
+          },
+          "peaks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "condition_label": { "type": "string" },
+                "display_name": { "type": "string" },
+                "peak_rating": { "type": ["object", "null"] },
+                "peak_analysis": { "type": ["object", "null"] },
+                "peak_analysis_absent_reason": { "type": ["string", "null"] },
+                "best_of_day": { "type": "boolean" },
+                "wind_dir_label": { "type": ["string", "null"] },
+                "wind_speed_kmh": { "type": ["number", "null"] },
+                "wind_intensity": { "type": ["string", "null"] },
+                "evolution_samples": {
+                  "type": "array",
+                  "maxItems": 3,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "band": { "enum": ["morning", "midday", "afternoon"] },
+                      "local_hour": { "type": "string" },
+                      "size_point_m": { "type": ["number", "null"] },
+                      "wind_dir_label": { "type": ["string", "null"] },
+                      "wind_speed_kmh": { "type": ["number", "null"] },
+                      "wind_intensity": { "type": ["string", "null"] },
+                      "condition_label": { "type": ["string", "null"] },
+                      "incomplete_or_uncertain": { "type": "boolean" }
+                    },
+                    "required": ["band", "local_hour", "incomplete_or_uncertain"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

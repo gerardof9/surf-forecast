@@ -443,6 +443,9 @@ class WindAssessment:
     quality_class: QualityClass
     favorable: bool | None
     reasons: list[str] = field(default_factory=list)
+    # Display pass-through only (presentation); not used by evaluation thresholds.
+    speed_kmh: float | None = None
+    direction_deg: float | None = None
 
 
 @dataclass

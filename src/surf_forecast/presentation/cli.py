@@ -231,16 +231,34 @@ def _cmd_fixtures(args: argparse.Namespace) -> int:
 
 def _print_forecast(payload: dict[str, Any]) -> None:
     print(f"Consulta {payload.get('query', {}).get('reference_time')}  snapshot {payload.get('snapshot_id')}")
+    query_times = payload.get("query_times") or {}
+    data_times = payload.get("data_times") or {}
+    if query_times.get("executed_at_local"):
+        print(f"Consulta local: {query_times['executed_at_local']}")
+    if data_times.get("meteorological_updated_at_local"):
+        print(f"Datos: {data_times['meteorological_updated_at_local']} ({data_times.get('label', '')})")
     notice = payload.get("shared_regional_input", {}).get("notice_label")
     if notice:
         print(notice)
     print(payload.get("attribution", {}).get("text", ""))
     for day in payload.get("days", []):
-        print(f"\n{day.get('local_date')}  {day.get('headline')}")
+        title = day.get("display_title") or day.get("local_date")
+        print(f"\n{title}  {day.get('headline') or ''}")
+        rating = day.get("day_rating")
+        if rating:
+            print(f"  Valoración del día: {rating.get('score'):.1f}/5  ({rating.get('caption') or ''})")
+        elif day.get("day_rating_absent_reason"):
+            print(f"  Sin valoración — {day.get('day_rating_absent_reason')}")
+        analysis = day.get("day_analysis") or {}
+        if analysis.get("text"):
+            print(f"  Análisis: {analysis['text']}")
         for peak in day.get("peaks", []):
-            mark = "*" if peak.get("highlighted") else " "
+            mark = "*" if peak.get("best_of_day") else " "
             label = peak.get("condition_label") or STATE_LABELS.get(peak.get("state"), peak.get("state"))
-            print(f" {mark} {peak.get('peak_id'):16} {label}")
+            name = peak.get("display_name") or peak.get("peak_id")
+            peak_rating = peak.get("peak_rating")
+            score = f"  {peak_rating['score']:.1f}/5" if peak_rating else ""
+            print(f" {mark} {name:16} {label}{score}")
             for reason in spanish_reasons(peak.get("reason_codes") or []):
                 print(f"     {reason}")
 

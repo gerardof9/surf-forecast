@@ -9,26 +9,45 @@ from textual.app import App
 from textual.worker import Worker
 
 from surf_forecast.application.forecast_service import ForecastUnavailable, PersistenceError, run_forecast
-from surf_forecast.application.profile_service import list_profiles
 from surf_forecast.domain.models import QueryMode, QueryRequest
-from surf_forecast.presentation.tui.screens import ForecastScreen, HelpScreen, ProfileScreen
+from surf_forecast.presentation.tui.screens import DailyReportScreen, HelpScreen, PeakDetailScreen
 
 
 class SurfForecastApp(App):
     CSS = """
-    #shared { color: $warning; padding: 0 1; }
-    #detail { width: 1fr; padding: 1; }
-    DataTable { width: 1fr; height: 1fr; }
+    Screen { layout: vertical; }
+    #report-header { height: auto; max-height: 2; padding: 0 1; color: cyan; }
+    #main { height: 1fr; layout: horizontal; }
+    #main.narrow { layout: vertical; }
+    #days-rail { width: 28; min-width: 18; border-right: solid $primary; padding: 0 1; }
+    #main.narrow #days-rail { width: 1fr; height: auto; max-height: 12; border-right: none; border-bottom: solid $primary; }
+    #day-list { height: 1fr; }
+    #legend { height: auto; color: $text-muted; padding: 1 0; }
+    #main.narrow #legend { display: none; }
+    #report-body { width: 1fr; padding: 0 1; height: 1fr; }
+    .section-title { text-style: bold; color: cyan; margin-top: 1; }
+    #day-analysis { height: auto; min-height: 3; }
+    #peak-cards { height: auto; }
+    #detail-body { padding: 0 1; height: 1fr; }
+    #status { height: 1; }
+    #help-body { padding: 1 2; }
     """
-    TITLE = "Pronóstico La Paloma"
+    TITLE = "SURF · LA PALOMA"
+    # Set False in tests (thread workers unsupported under run_test).
+    auto_query_on_mount = True
 
     def on_mount(self) -> None:
-        self.forecast_screen = ForecastScreen()
+        self.forecast_screen = DailyReportScreen()
         self.push_screen(self.forecast_screen)
-        self.run_query(QueryMode.NORMAL, "Actualizando datos…")
+        if self.auto_query_on_mount:
+            self.run_query(QueryMode.NORMAL, "Actualizando datos…")
 
     def run_query(self, mode: QueryMode, status: str) -> None:
-        self.forecast_screen.query_one("#status").show(status)
+        if hasattr(self, "forecast_screen"):
+            try:
+                self.forecast_screen.query_one("#status").show(status)
+            except Exception:
+                pass
         self.run_worker(self._load(mode), exclusive=True, thread=True, name="forecast")
 
     def _load(self, mode: QueryMode) -> dict:
@@ -52,7 +71,10 @@ class SurfForecastApp(App):
                     message = "Sin datos ni snapshot guardado."
                 elif isinstance(error, PersistenceError):
                     message = "No se pudo guardar el snapshot."
-                self.forecast_screen.query_one("#status").show(message)
+                try:
+                    self.forecast_screen.query_one("#status").show(message)
+                except Exception:
+                    pass
             return
         result = event.worker.result
         if not result:
@@ -63,34 +85,17 @@ class SurfForecastApp(App):
         if result["mode"] == "stored_only":
             status = "Solo datos guardados"
         self.forecast_screen.show_payload(result["payload"], status)
+        # Refresh open detail screen if present.
+        for screen in self.screen_stack:
+            if isinstance(screen, PeakDetailScreen):
+                screen.payload = result["payload"]
+                screen._render()
 
     def action_refresh(self) -> None:
         self.run_query(QueryMode.FORCE_REFRESH, "Actualizando datos…")
 
     def action_stored(self) -> None:
         self.run_query(QueryMode.STORED_ONLY, "Usando datos guardados…")
-
-    def action_profiles(self) -> None:
-        profiles = [
-            {
-                "peak_id": profile.peak_id,
-                "name": profile.name,
-                "status": profile.status.value,
-                "validation_errors": profile.validation_errors,
-            }
-            for profile in list_profiles()
-        ]
-        self.push_screen(ProfileScreen(profiles))
-
-    def action_sources(self) -> None:
-        payload = self.forecast_screen.payload or {}
-        lines = []
-        for source in payload.get("sources", []):
-            lines.append(
-                f"{source.get('source_id')} {source.get('status')} "
-                f"edad={source.get('data_age_seconds')} corrida={source.get('model_run_availability')}"
-            )
-        self.forecast_screen.query_one("#status").show(" | ".join(lines) or "Sin fuentes")
 
     def action_help(self) -> None:
         self.push_screen(HelpScreen())

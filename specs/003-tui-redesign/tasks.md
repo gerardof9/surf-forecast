@@ -28,9 +28,9 @@
 
 **Purpose**: Add feature contract artifact and check harness skeleton without changing runtime behavior yet
 
-- [ ] T001 Create additive presentation schema draft in `specs/003-tui-redesign/contracts/schemas/forecast-output-1.1.0.schema.json` documenting 1.1.0 fields from `contracts/presentation.md` (do not rewrite `001` schema in place)
-- [ ] T002 [P] Create focused check runner stub `scripts/check_report_presentation.py` that exits 0 with “no checks yet” placeholder and documents how to run it from repo root
-- [ ] T003 [P] Add brief pointer in `specs/003-tui-redesign/quickstart.md` to the check runner command once stub exists
+- [x] T001 Create additive presentation schema draft in `specs/003-tui-redesign/contracts/schemas/forecast-output-1.1.0.schema.json` documenting 1.1.0 fields from `contracts/presentation.md` (do not rewrite `001` schema in place)
+- [x] T002 [P] Create focused check runner stub `scripts/check_report_presentation.py` that exits 0 with “no checks yet” placeholder and documents how to run it from repo root
+- [x] T003 [P] Add brief pointer in `specs/003-tui-redesign/quickstart.md` to the check runner command once stub exists
 
 ---
 
@@ -40,13 +40,13 @@
 
 **⚠️ CRITICAL**: Do not modify surfability thresholds, `k`, or quality rules in `src/surf_forecast/domain/evaluation.py`
 
-- [ ] T004 Replace user-facing label tables with FR-017 map and keep English machine ids in `src/surf_forecast/domain/presentation.py`
-- [ ] T005 [P] Implement confirmed ordinal grade→score map only (no multi-factor formula) and best-resolved day/peak rating helpers in `src/surf_forecast/domain/day_rating.py` (`best_resolved_grade_map_v1`, whole points, captions from `data-model.md`)
-- [ ] T006 [P] Implement template day/peak narrative builders emitting `sentences[]` with `kind` ∈ {fact, interpretation, limitation} (facts only; no LLM) in `src/surf_forecast/domain/narrative.py`
-- [ ] T007 [P] Implement evolution band sampler (`06:00–10:59` / `11:00–14:59` / `15:00–20:00` UYT) including wind speed/direction pass-through when available in `src/surf_forecast/domain/evolution_samples.py`
-- [ ] T008 Wire helpers into `build_presentation` in `src/surf_forecast/domain/presentation.py`: `schema_version` `1.1.0`, report fields, dual timestamps; pass through `wind_speed_kmh` / direction for cards and samples from engine slot inputs (extend `WindAssessment` or slot dict with display-only speed/direction—**do not** change evaluation thresholds); ensure snapshots continue to persist the presentation payload
-- [ ] T009 [P] Add pure-Python checks for FR-017 labels, ordinal grade→score, best-peak day rating, narrative omission, sampling bands, **provisional-profile day**, and **analysis-window-completed today** in `scripts/check_report_presentation.py`
-- [ ] T010 Update CLI human summary to print day analysis, day rating, and peak ratings from payload in `src/surf_forecast/presentation/cli.py` (no TUI redesign yet)
+- [x] T004 Replace user-facing label tables with FR-017 map and keep English machine ids in `src/surf_forecast/domain/presentation.py`
+- [x] T005 [P] Implement confirmed ordinal grade→score map only (no multi-factor formula) and best-resolved day/peak rating helpers in `src/surf_forecast/domain/day_rating.py` (`best_resolved_grade_map_v1`, whole points, captions from `data-model.md`)
+- [x] T006 [P] Implement template day/peak narrative builders emitting `sentences[]` with `kind` ∈ {fact, interpretation, limitation} (facts only; no LLM) in `src/surf_forecast/domain/narrative.py`
+- [x] T007 [P] Implement evolution band sampler (`06:00–10:59` / `11:00–14:59` / `15:00–20:00` UYT) including wind speed/direction pass-through when available in `src/surf_forecast/domain/evolution_samples.py`
+- [x] T008 Wire helpers into `build_presentation` in `src/surf_forecast/domain/presentation.py`: `schema_version` `1.1.0`, report fields, dual timestamps; pass through `wind_speed_kmh` / direction for cards and samples from engine slot inputs (extend `WindAssessment` or slot dict with display-only speed/direction—**do not** change evaluation thresholds); ensure snapshots continue to persist the presentation payload
+- [x] T009 [P] Add pure-Python checks for FR-017 labels, ordinal grade→score, best-peak day rating, narrative omission, sampling bands, **provisional-profile day**, and **analysis-window-completed today** in `scripts/check_report_presentation.py`
+- [x] T010 Update CLI human summary to print day analysis, day rating, and peak ratings from payload in `src/surf_forecast/presentation/cli.py` (no TUI redesign yet)
 
 **Checkpoint**: A normal/`fixture` forecast payload includes 1.1.0 report fields; `scripts/check_report_presentation.py` passes; engine thresholds untouched
 
@@ -60,17 +60,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Extend `scripts/check_report_presentation.py` with fixtures covering good day, mixed peaks, insufficient-for-rating (`Sin valoración`), provisional profile, and analysis-window-completed today
+- [x] T011 [P] [US1] Extend `scripts/check_report_presentation.py` with fixtures covering good day, mixed peaks, insufficient-for-rating (`Sin valoración`), provisional profile, and analysis-window-completed today
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Add star/numeric rating widget helpers in `src/surf_forecast/presentation/tui/widgets.py` (glyph must match whole-point score; numeric always visible)
-- [ ] T013 [P] [US1] Add peak card / day-list / condition-legend widgets in `src/surf_forecast/presentation/tui/widgets.py` (section title exactly `PICOS DEL DÍA`; wind shows intensity/class and km/h when pass-through present)
-- [ ] T014 [US1] Implement `DailyReportScreen` (View A) composition per `contracts/tui.md` / `mock2.png` hierarchy in `src/surf_forecast/presentation/tui/screens.py` (replace three-pane comparator layout)
-- [ ] T015 [US1] Render `day_analysis.sentences` with distinct styling/prefixes for `fact` vs `interpretation` vs `limitation` (FR-006) in `src/surf_forecast/presentation/tui/screens.py` / `widgets.py`
-- [ ] T016 [US1] Render dual timestamps and data-state chip from payload in View A header via `src/surf_forecast/presentation/tui/screens.py` and header helpers in `widgets.py`
-- [ ] T017 [US1] Bind View A day list as initial focus; ↑/↓ change day and refresh analysis/rating/cards in `src/surf_forecast/presentation/tui/screens.py`
-- [ ] T018 [US1] Point app mount to `DailyReportScreen` and keep refresh worker flow in `src/surf_forecast/presentation/tui/app.py`
+- [x] T012 [P] [US1] Add star/numeric rating widget helpers in `src/surf_forecast/presentation/tui/widgets.py` (glyph must match whole-point score; numeric always visible)
+- [x] T013 [P] [US1] Add peak card / day-list / condition-legend widgets in `src/surf_forecast/presentation/tui/widgets.py` (section title exactly `PICOS DEL DÍA`; wind shows intensity/class and km/h when pass-through present)
+- [x] T014 [US1] Implement `DailyReportScreen` (View A) composition per `contracts/tui.md` / `mock2.png` hierarchy in `src/surf_forecast/presentation/tui/screens.py` (replace three-pane comparator layout)
+- [x] T015 [US1] Render `day_analysis.sentences` with distinct styling/prefixes for `fact` vs `interpretation` vs `limitation` (FR-006) in `src/surf_forecast/presentation/tui/screens.py` / `widgets.py`
+- [x] T016 [US1] Render dual timestamps and data-state chip from payload in View A header via `src/surf_forecast/presentation/tui/screens.py` and header helpers in `widgets.py`
+- [x] T017 [US1] Bind View A day list as initial focus; ↑/↓ change day and refresh analysis/rating/cards in `src/surf_forecast/presentation/tui/screens.py`
+- [x] T018 [US1] Point app mount to `DailyReportScreen` and keep refresh worker flow in `src/surf_forecast/presentation/tui/app.py`
 
 **Checkpoint**: View A usable as daily report MVP; cards use `PICOS DEL DÍA`; no “recomendados”
 
@@ -84,10 +84,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement ←/→ spot focus and Enter → push peak detail screen in `src/surf_forecast/presentation/tui/screens.py`
-- [ ] T020 [US2] Add `PeakDetailScreen` shell (header + placeholder body) and Esc pop preserving day/peak indices in `src/surf_forecast/presentation/tui/screens.py`
-- [ ] T021 [US2] Update app-level bindings: keep `R`, `o`, `?`, `Q`; **remove** `p`/ProfileScreen wiring in `src/surf_forecast/presentation/tui/app.py`
-- [ ] T022 [US2] Update Help/About copy with new keys, profile JSON path (no interactive profiles), and honesty notes in `src/surf_forecast/presentation/tui/screens.py`
+- [x] T019 [US2] Implement ←/→ spot focus and Enter → push peak detail screen in `src/surf_forecast/presentation/tui/screens.py`
+- [x] T020 [US2] Add `PeakDetailScreen` shell (header + placeholder body) and Esc pop preserving day/peak indices in `src/surf_forecast/presentation/tui/screens.py`
+- [x] T021 [US2] Update app-level bindings: keep `R`, `o`, `?`, `Q`; **remove** `p`/ProfileScreen wiring in `src/surf_forecast/presentation/tui/app.py`
+- [x] T022 [US2] Update Help/About copy with new keys, profile JSON path (no interactive profiles), and honesty notes in `src/surf_forecast/presentation/tui/screens.py`
 
 **Checkpoint**: Navigation loop A↔B works; profiles screen gone
 
@@ -101,14 +101,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T023 [P] [US3] Add checks in `scripts/check_report_presentation.py` for evolution sample bands (incl. wind pass-through when present) and peak-analysis omit-when-thin behavior
+- [x] T023 [P] [US3] Add checks in `scripts/check_report_presentation.py` for evolution sample bands (incl. wind pass-through when present) and peak-analysis omit-when-thin behavior
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Render peak summary (display_name, FR-017 condition, size, swell/wind with km/h when available, confidence, peak_rating) in `PeakDetailScreen` inside `src/surf_forecast/presentation/tui/screens.py`
-- [ ] T025 [US3] Render `evolution_samples` table/rows and `MEJOR VENTANA ESTIMADA` only from engine `best_window` (never invent) in `src/surf_forecast/presentation/tui/screens.py`
-- [ ] T026 [US3] Render peak analysis text when present (else omit/limitation) in `src/surf_forecast/presentation/tui/screens.py`
-- [ ] T027 [US3] Support ←/→ to change peak within the selected day while on View B in `src/surf_forecast/presentation/tui/screens.py`
+- [x] T024 [US3] Render peak summary (display_name, FR-017 condition, size, swell/wind with km/h when available, confidence, peak_rating) in `PeakDetailScreen` inside `src/surf_forecast/presentation/tui/screens.py`
+- [x] T025 [US3] Render `evolution_samples` table/rows and `MEJOR VENTANA ESTIMADA` only from engine `best_window` (never invent) in `src/surf_forecast/presentation/tui/screens.py`
+- [x] T026 [US3] Render peak analysis text when present (else omit/limitation) in `src/surf_forecast/presentation/tui/screens.py`
+- [x] T027 [US3] Support ←/→ to change peak within the selected day while on View B in `src/surf_forecast/presentation/tui/screens.py`
 
 **Checkpoint**: Question 3 (timing) answerable from View B without technical pane
 
@@ -122,9 +122,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T028 [US4] Add collapsible technical details widget (collapsed by default) in `src/surf_forecast/presentation/tui/widgets.py`
-- [ ] T029 [US4] Wire `D` toggle and populate technical fields from payload/sources/criteria/snapshot in `src/surf_forecast/presentation/tui/screens.py`
-- [ ] T030 [US4] Ensure footer hints document `D` / Esc and technical content does not dominate default View B layout in `src/surf_forecast/presentation/tui/screens.py` / `widgets.py`
+- [x] T028 [US4] Add collapsible technical details widget (collapsed by default) in `src/surf_forecast/presentation/tui/widgets.py`
+- [x] T029 [US4] Wire `D` toggle and populate technical fields from payload/sources/criteria/snapshot in `src/surf_forecast/presentation/tui/screens.py`
+- [x] T030 [US4] Ensure footer hints document `D` / Esc and technical content does not dominate default View B layout in `src/surf_forecast/presentation/tui/screens.py` / `widgets.py`
 
 **Checkpoint**: Traceability available without a separate diagnostics screen
 
@@ -138,13 +138,13 @@
 
 ### Tests for User Story 5
 
-- [ ] T031 [P] [US5] Add label-map assertions for all FR-017 ids and “incomplete not mapped to few waves” in `scripts/check_report_presentation.py`
+- [x] T031 [P] [US5] Add label-map assertions for all FR-017 ids and “incomplete not mapped to few waves” in `scripts/check_report_presentation.py`
 
 ### Implementation for User Story 5
 
-- [ ] T032 [US5] Ensure cards/detail/legend never show raw enums (`fair`, `resolved`) as primary labels in `src/surf_forecast/presentation/tui/screens.py` and `widgets.py`
-- [ ] T033 [US5] Ensure incomplete/unevaluable peaks cannot appear as recommended/`Pocas olas` and best_of_day only on resolved rating source in `src/surf_forecast/domain/presentation.py` + TUI card rendering
-- [ ] T034 [US5] Align Help legend text with FR-017 and score honesty (not a probability) in `src/surf_forecast/presentation/tui/screens.py`
+- [x] T032 [US5] Ensure cards/detail/legend never show raw enums (`fair`, `resolved`) as primary labels in `src/surf_forecast/presentation/tui/screens.py` and `widgets.py`
+- [x] T033 [US5] Ensure incomplete/unevaluable peaks cannot appear as recommended/`Pocas olas` and best_of_day only on resolved rating source in `src/surf_forecast/domain/presentation.py` + TUI card rendering
+- [x] T034 [US5] Align Help legend text with FR-017 and score honesty (not a probability) in `src/surf_forecast/presentation/tui/screens.py`
 
 **Checkpoint**: Vocabulary and honesty rules hold across A/B/Help
 
@@ -154,11 +154,11 @@
 
 **Purpose**: Responsive layout, regression, manual validation
 
-- [ ] T035 [P] Implement narrow vs wide stacking/scroll behavior for View A/B without silent truncation of analysis in `src/surf_forecast/presentation/tui/screens.py` and CSS in `src/surf_forecast/presentation/tui/app.py`
-- [ ] T036 [P] Remove dead `ProfileScreen` code paths and unused imports from `src/surf_forecast/presentation/tui/screens.py` / `app.py` if any remain
-- [ ] T037 Run `scripts/check_report_presentation.py` and existing engine fixture/manual replay from `specs/001-la-paloma-surf-forecast/quickstart.md`; fix regressions without changing thresholds
-- [ ] T038 Execute `specs/003-tui-redesign/quickstart.md` manual TUI checklist (good / mixed / incomplete / provisional / window-completed / dual time / narrow width / fact-vs-interpretation / wind km/h when present) and record gaps if any
-- [ ] T039 [P] Sync any final binding/copy tweaks into `specs/003-tui-redesign/contracts/tui.md` only if implementation required a documented adaptation
+- [x] T035 [P] Implement narrow vs wide stacking/scroll behavior for View A/B without silent truncation of analysis in `src/surf_forecast/presentation/tui/screens.py` and CSS in `src/surf_forecast/presentation/tui/app.py`
+- [x] T036 [P] Remove dead `ProfileScreen` code paths and unused imports from `src/surf_forecast/presentation/tui/screens.py` / `app.py` if any remain
+- [x] T037 Run `scripts/check_report_presentation.py` and existing engine fixture/manual replay from `specs/001-la-paloma-surf-forecast/quickstart.md`; fix regressions without changing thresholds
+- [x] T038 Execute `specs/003-tui-redesign/quickstart.md` manual TUI checklist (good / mixed / incomplete / provisional / window-completed / dual time / narrow width / fact-vs-interpretation / wind km/h when present) and record gaps if any
+- [x] T039 [P] Sync any final binding/copy tweaks into `specs/003-tui-redesign/contracts/tui.md` only if implementation required a documented adaptation
 
 ---
 

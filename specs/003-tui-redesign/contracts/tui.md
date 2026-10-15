@@ -86,7 +86,7 @@ Source/model, update/age, raw Hs vs derived size, k/range, profile/criteria vers
 |-----|---------|--------|
 | `↑` / `↓` | View A | Change day (initial focus on day list) |
 | `←` / `→` | View A | Move among spot cards |
-| `Enter` | View A spot | Open View B |
+| `Enter` | View A (priority binding) | Open View B for the focused peak card |
 | `Esc` | View B | Back to View A (same day) |
 | `D` | View B | Toggle technical details |
 | `R` | A/B | Force refresh (existing rules) |

@@ -177,6 +177,8 @@ def evaluate_slot(
         quality_class=wind_class,
         favorable=True if wind_class is QualityClass.FAVORABLE else False if wind_class is QualityClass.UNFAVORABLE else None,
         reasons=[],
+        speed_kmh=wind.speed_kmh,
+        direction_deg=wind.direction_deg,
     )
     count = sum(
         1

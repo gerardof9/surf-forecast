@@ -28,7 +28,9 @@ After implementation, run the focused checks added for:
 6. Provisional-profile day and analysis-window-completed today
 7. Existing engine fixture replay still succeeds
 
-Exact commands will match whatever runner the tasks introduce (e.g. `python scripts/check_report_presentation.py`).
+```powershell
+.\.venv\Scripts\python.exe scripts\check_report_presentation.py
+```
 
 ## Manual checklist — View A
 
@@ -64,6 +66,12 @@ Exact commands will match whatever runner the tasks introduce (e.g. `python scri
 | Provisional profile | Limits visible; never “calibrated” |
 | Today after 20:00 UYT | Analysis window completed; no new best window |
 | Older data timestamp on later day | Labeled as data age/update, not false same-day refresh |
+
+## Implementation validation notes (2026-10-14)
+
+- `scripts/check_report_presentation.py` — OK (labels, ordinal scores, narratives, bands, provisional/window-completed, incomplete≠few waves).
+- Fixture replay: `python -m surf_forecast fixtures replay fixtures\normal --now 2026-10-13T15:00:00-03:00` emits `schema_version` `1.1.0` with day/peak ratings, analysis, wind km/h pass-through, evolution samples.
+- Interactive TUI checklist above still recommended once on a real terminal (`python -m surf_forecast`).
 
 ## Stop conditions
 
