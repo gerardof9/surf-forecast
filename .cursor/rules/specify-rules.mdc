@@ -5,8 +5,14 @@ alwaysApply: true
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/004-tui-visual-craft/plan.md`.
+`specs/005-daily-brief/plan.md`.
 
-Binding graphic contract: `specs/004-tui-visual-craft/graphic-layer.md`.
-Active Spec Kit feature directory: `specs/004-tui-visual-craft` only.
+Related artifacts:
+- Spec: `specs/005-daily-brief/spec.md`
+- Research: `specs/005-daily-brief/research.md`
+- Data model: `specs/005-daily-brief/data-model.md`
+- Contracts: `specs/005-daily-brief/contracts/`
+- Manual validation: `specs/005-daily-brief/quickstart.md`
+
+Active Spec Kit feature directory: `specs/005-daily-brief` only.
 <!-- SPECKIT END -->
