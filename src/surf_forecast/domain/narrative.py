@@ -1,4 +1,4 @@
-"""Template-based Spanish day/peak analysis (no LLM)."""
+"""Template-based Spanish day brief and legacy peak analysis (no LLM)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,8 @@ from typing import Any
 
 from surf_forecast.domain.models import DaySummary, ForecastState, PeakDayForecast, PeakProfile, ProfileStatus
 
-METHOD = "template_v1"
+METHOD = "template_v2"
+METHOD_PEAK = "template_v1"
 
 _TREND_ES = {
     "building": "oleaje en aumento",
@@ -16,6 +17,98 @@ _TREND_ES = {
     "unsupported": "tendencia de oleaje no determinada",
 }
 
+_DISCLAIMER = "Son estimaciones, no una garantía de olas ni de seguridad en el agua."
+
+
+def build_day_brief(
+    day: DaySummary,
+    *,
+    profiles: list[PeakProfile],
+    worth_spots: list[dict[str, Any]],
+    go_window: dict[str, Any] | None,
+    height: dict[str, Any] | None,
+    sources_ok: bool = True,
+    incomplete: bool = False,
+) -> dict[str, str | None]:
+    """Plain-Spanish DayBrief narrative (headline + body + optional caution)."""
+    if incomplete:
+        return {
+            "headline": "Datos incompletos para este día.",
+            "body": (
+                "Aún no hay un brief usable para mañana con la información disponible. "
+                f"{_DISCLAIMER}"
+            ),
+            "caution": "No se copió el día de hoy: faltan datos propios de esta fecha.",
+        }
+
+    profile_by_id = {p.peak_id: p for p in profiles}
+    window_done = (
+        day.state is ForecastState.ANALYSIS_WINDOW_COMPLETED
+        or day.headline_code == "analysis_window_completed"
+    )
+
+    cond_label = _day_condition_label(day)
+    if worth_spots:
+        names = [s["display_name"] for s in worth_spots]
+        best_name = names[0]
+        if len(names) == 1:
+            where = f"Conviene priorizar {best_name}"
+        else:
+            where = f"Conviene priorizar {best_name}" + (
+                f" (también mirar {', '.join(names[1:])})" if len(names) > 1 else ""
+            )
+        if go_window and go_window.get("display"):
+            when = go_window["display"]
+            if go_window.get("wide"):
+                headline = f"{cond_label}: {best_name}; ventana amplia."
+            else:
+                headline = f"{cond_label}: mejor en {best_name}."
+            timing_sentence = f"{where}. {when}."
+        else:
+            headline = f"{cond_label}: priorizar {best_name}."
+            timing_sentence = f"{where}; no hay una hora clara de entrada."
+    else:
+        headline = f"{cond_label}: ningún pico claro para ir."
+        timing_sentence = "Ningún pico pasa el umbral para recomendar una playa hoy."
+
+    parts: list[str] = []
+    if day.swell_trend is not None and day.swell_trend.state.value != "unsupported":
+        trend = _TREND_ES.get(day.swell_trend.state.value, day.swell_trend.state.value)
+        parts.append(f"El oleaje viene {trend}.")
+
+    rotation = day.wind_rotation or {}
+    start_i = rotation.get("start_intensity")
+    end_i = rotation.get("end_intensity")
+    if start_i and end_i:
+        if start_i == end_i:
+            parts.append(f"Viento estimado {start_i} durante el día.")
+        else:
+            parts.append(f"Viento de {start_i} al inicio hacia {end_i} más tarde.")
+
+    if height and height.get("display"):
+        parts.append(f"Altura surfeable estimada en el mejor pico: {height['display']}.")
+
+    parts.append(timing_sentence)
+
+    if worth_spots:
+        best = worth_spots[0]
+        profile = profile_by_id.get(best["peak_id"])
+        if profile is not None:
+            parts.append(f"{profile.name} encaja mejor con el oleaje/viento de la evaluación.")
+
+    parts.append(_DISCLAIMER)
+    body = " ".join(parts)
+
+    caution: str | None = None
+    if window_done:
+        caution = "La ventana de análisis de hoy ya cerró; tomá el brief como referencia, no como hora nueva."
+    elif any(p.status is ProfileStatus.PROVISIONAL for p in profiles):
+        caution = "Hay perfiles provisionales: tratá la lectura como orientativa."
+    elif not sources_ok:
+        caution = "Fuentes incompletas: el brief usa solo lo disponible."
+
+    return {"headline": headline, "body": body, "caution": caution}
+
 
 def build_day_analysis(
     day: DaySummary,
@@ -23,111 +116,27 @@ def build_day_analysis(
     profiles: list[PeakProfile],
     sources_ok: bool = True,
 ) -> dict[str, Any]:
-    facts: list[dict[str, str]] = []
-    interpretations: list[dict[str, str]] = []
-    limitations: list[dict[str, str]] = []
-    profile_by_id = {p.peak_id: p for p in profiles}
-
-    window_done = day.state is ForecastState.ANALYSIS_WINDOW_COMPLETED or day.headline_code == "analysis_window_completed"
-
-    if day.swell_trend is not None and day.swell_trend.state.value != "unsupported":
-        trend = _TREND_ES.get(day.swell_trend.state.value, day.swell_trend.state.value)
-        facts.append({"kind": "fact", "text": f"Tendencia del oleaje en la ventana: {trend}."})
-
-    rotation = day.wind_rotation or {}
-    if rotation:
-        start_i = rotation.get("start_intensity")
-        end_i = rotation.get("end_intensity")
-        if start_i and end_i:
-            if start_i == end_i:
-                facts.append(
-                    {
-                        "kind": "fact",
-                        "text": f"Viento estimado de intensidad {start_i} a lo largo de la ventana de análisis.",
-                    }
-                )
-            else:
-                facts.append(
-                    {
-                        "kind": "fact",
-                        "text": f"Viento estimado de intensidad {start_i} al inicio hacia {end_i} al cierre de la ventana.",
-                    }
-                )
-
-    sizes = [
-        peak.size
-        for peak in day.peaks
-        if peak.size is not None and peak.condition is not None
+    """Legacy bag kept for transitional checks; prefer build_day_brief for presentation."""
+    brief = build_day_brief(
+        day,
+        profiles=profiles,
+        worth_spots=[],
+        go_window=None,
+        height=None,
+        sources_ok=sources_ok,
+    )
+    sentences: list[dict[str, str]] = [
+        {"kind": "interpretation", "text": brief["headline"] or ""},
+        {"kind": "interpretation", "text": brief["body"] or ""},
     ]
-    if sizes:
-        lo = min(s.minimum_m for s in sizes)
-        hi = max(s.maximum_m for s in sizes)
-        facts.append(
-            {
-                "kind": "fact",
-                "text": (
-                    f"Tamaño surfeable estimado entre los picos evaluados: "
-                    f"aprox. {lo:.1f}–{hi:.1f} m (derivado; no es Hs cruda)."
-                ),
-            }
-        )
-
-    best_ids = day.best_peak_ids or []
-    for peak_id in best_ids[:2]:
-        profile = profile_by_id.get(peak_id)
-        if profile is None:
-            continue
-        orient = _orientation_phrase(profile.orientation_deg)
-        interpretations.append(
-            {
-                "kind": "interpretation",
-                "text": f"{profile.name}: exposición orientada ~{orient} según perfil (no es un dato del modelo).",
-            }
-        )
-
-    if window_done:
-        limitations.append(
-            {
-                "kind": "limitation",
-                "text": "La ventana de análisis de hoy (06:00–20:00 UYT) ya finalizó; no se propone una nueva mejor hora de entrada.",
-            }
-        )
-
-    if any(p.status is ProfileStatus.PROVISIONAL for p in profiles):
-        limitations.append(
-            {
-                "kind": "limitation",
-                "text": "Hay perfiles provisionales: la interpretación de exposición no está calibrada en campo.",
-            }
-        )
-
-    if not sources_ok:
-        limitations.append(
-            {
-                "kind": "limitation",
-                "text": "Fuentes incompletas o degradadas: el análisis se basa solo en lo disponible.",
-            }
-        )
-
+    if brief.get("caution"):
+        sentences.append({"kind": "limitation", "text": str(brief["caution"])})
     if not day.peaks:
-        limitations.append(
-            {
-                "kind": "limitation",
-                "text": "No hay picos evaluables para este día con los datos actuales.",
-            }
+        sentences.append(
+            {"kind": "limitation", "text": "No hay picos evaluables para este día con los datos actuales."}
         )
-    elif not facts and not interpretations:
-        limitations.append(
-            {
-                "kind": "limitation",
-                "text": "Datos insuficientes para un análisis del día con hechos respaldados.",
-            }
-        )
-
-    # Facts and interpretations first; limitations last (secondary weight).
-    sentences = facts + interpretations + limitations
-    supported = bool(facts or interpretations)
-    text = " ".join(s["text"] for s in sentences)
+    supported = bool(day.peaks) and day.state is not ForecastState.INCOMPLETE_FORECAST
+    text = " ".join(s["text"] for s in sentences if s["text"])
     return {"text": text, "sentences": sentences, "supported": supported, "method": METHOD}
 
 
@@ -200,8 +209,24 @@ def build_peak_analysis(
         "text": " ".join(s["text"] for s in sentences),
         "sentences": sentences,
         "supported": True,
-        "method": METHOD,
+        "method": METHOD_PEAK,
     }, None
+
+
+def _day_condition_label(day: DaySummary) -> str:
+    from surf_forecast.domain.presentation import CONDITION_LABELS, STATE_LABELS
+
+    resolved = [
+        p.condition
+        for p in day.peaks
+        if p.condition is not None and p.state is ForecastState.RESOLVED
+    ]
+    if resolved:
+        from surf_forecast.domain.models import GRADE_ORDER
+
+        best = max(resolved, key=lambda g: GRADE_ORDER.index(g))
+        return CONDITION_LABELS.get(best.value, best.value)
+    return STATE_LABELS.get(day.state.value, day.state.value)
 
 
 def _orientation_phrase(degrees: float) -> str:

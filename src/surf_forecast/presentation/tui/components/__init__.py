@@ -3,6 +3,7 @@
 from surf_forecast.presentation.tui.components.analysis_panel import AnalysisPanel
 from surf_forecast.presentation.tui.components.badge import Badge, StatusPill
 from surf_forecast.presentation.tui.components.best_window import BestWindowCallout
+from surf_forecast.presentation.tui.components.day_brief_card import DayBriefCard
 from surf_forecast.presentation.tui.components.evolution_table import EvolutionTable
 from surf_forecast.presentation.tui.components.frame import Frame
 from surf_forecast.presentation.tui.components.header_bar import Banner, header_text, window_completed_banner
@@ -16,6 +17,7 @@ __all__ = [
     "Badge",
     "Banner",
     "BestWindowCallout",
+    "DayBriefCard",
     "EvolutionTable",
     "Frame",
     "PeakCard",

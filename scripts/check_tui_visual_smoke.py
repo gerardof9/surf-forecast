@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FR-G15 / SC-005: formatters unit checks + Textual run_test navigation smoke."""
+"""TUI smoke for 005-daily-brief: formatters + two DayBrief cards, no View B."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 FLOAT_RE = re.compile(r"\d+[.,]\d{4,}")
-ASCII_STARS_RE = re.compile(r"\*{2,}|-{2,}\s*$")
 
 
 def _check_formatters() -> None:
@@ -30,7 +29,7 @@ def _check_formatters() -> None:
     assert "357999" not in size, size
     assert "," in size or "n/d" in size, size
     assert format_period_s(None) == "Período n/d"
-    assert format_period_s(0) == "0 s"  # genuine zero OK
+    assert format_period_s(0) == "0 s"
     stars = format_stars(2.5)
     assert "★" in stars and "☆" in stars
     assert "*" not in stars
@@ -56,7 +55,6 @@ def _collect_text(widget) -> str:  # noqa: ANN001
     except Exception:
         pass
     try:
-        # Static stores content privately in Textual 8
         content = getattr(widget, "_Static__content", None) or getattr(widget, "renderable", "")
         chunks.append(str(content))
     except Exception:
@@ -69,13 +67,16 @@ def _collect_text(widget) -> str:  # noqa: ANN001
 async def _run_app_smoke() -> None:
     from surf_forecast.application.replay_service import replay_fixture
     from surf_forecast.presentation.tui.app import SurfForecastApp
-    from surf_forecast.presentation.tui.screens import PeakDetailScreen
+    from surf_forecast.presentation.tui.components.day_brief_card import DayBriefCard
 
     payload, _ = replay_fixture(
         ROOT / "fixtures" / "normal",
         datetime(2026, 10, 13, 15, 0, tzinfo=ZoneInfo("America/Montevideo")),
         json_mode=True,
     )
+    assert payload.get("schema_version") == "1.2.0", payload.get("schema_version")
+    assert len(payload.get("days") or []) == 2
+
     app = SurfForecastApp()
     app.auto_query_on_mount = False
     async with app.run_test(size=(140, 40)) as pilot:
@@ -83,59 +84,38 @@ async def _run_app_smoke() -> None:
         await pilot.pause()
         assert app._exception is None, app._exception
 
-        text_a = _collect_text(app.forecast_screen)
-        if FLOAT_RE.search(text_a):
-            raise AssertionError(f"raw multi-decimal float in View A: {FLOAT_RE.search(text_a)!r}")
-        if "***" in text_a or ASCII_STARS_RE.search(text_a.split("\n")[0] if False else ""):
-            # soft: only fail clear ASCII star bars
-            pass
-        if "★" not in text_a and "☆" not in text_a:
-            # may be absent if all Sin valoración — only require when scores exist
-            has_score = any(
-                (d.get("day_rating") or (p.get("peak_rating") for p in (d.get("peaks") or [])))
-                for d in (payload.get("days") or [])
-            )
-            # simplified: if any peak_rating in payload
-            has_score = False
-            for d in payload.get("days") or []:
-                if d.get("day_rating"):
-                    has_score = True
-                for p in d.get("peaks") or []:
-                    if p.get("peak_rating"):
-                        has_score = True
-            if has_score:
-                raise AssertionError("expected Unicode stars when scores present")
+        text = _collect_text(app.forecast_screen)
+        if FLOAT_RE.search(text):
+            raise AssertionError(f"raw multi-decimal float in home: {FLOAT_RE.search(text)!r}")
+        if "PICOS DEL DÍA" in text:
+            raise AssertionError("PICOS DEL DÍA must be absent")
+        if "LEYENDA" in text:
+            raise AssertionError("LEYENDA must be absent")
 
-        app.forecast_screen.action_peak_next()
-        await pilot.pause(0.1)
-        app.forecast_screen.action_open_detail()
-        await pilot.pause(0.5)
-        assert app._exception is None, app._exception
-        assert isinstance(app.screen, PeakDetailScreen), type(app.screen)
+        # Dual timestamps (FR-014)
+        header = _collect_text(app.forecast_screen.query_one("#report-header"))
+        if "Consulta" not in header and "consulta" not in header.lower():
+            # header_text uses "Consulta:"
+            if "Consulta:" not in header:
+                raise AssertionError(f"missing consultation timestamp in header: {header!r}")
+        if "Datos" not in header and "meteorológ" not in header.lower():
+            if "Datos meteorológicos:" not in header:
+                raise AssertionError(f"missing data timestamp in header: {header!r}")
 
-        text_b = _collect_text(app.screen)
-        if FLOAT_RE.search(text_b):
-            raise AssertionError(f"raw multi-decimal float in View B: {FLOAT_RE.search(text_b)!r}")
-        # Best window primary should not be ISO-led when present
-        if "Ventana amplia" in text_b or "★" in text_b:
-            if re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", text_b):
-                # technical pane may include ISO — only fail if it dominates best-window line
-                # Check callout frame body specifically
-                try:
-                    win = app.screen.query_one("#detail-window")
-                    win_text = _collect_text(win)
-                    if re.search(r"\d{4}-\d{2}-\d{2}T", win_text):
-                        raise AssertionError(f"ISO-first best window: {win_text!r}")
-                    if "840" in win_text and "Ventana amplia" not in win_text:
-                        raise AssertionError(f"minute-led wide window: {win_text!r}")
-                except AssertionError:
-                    raise
-                except Exception:
-                    pass
+        cards = list(app.forecast_screen.query(DayBriefCard))
+        if len(cards) != 2:
+            raise AssertionError(f"expected 2 DayBriefCard, got {len(cards)}")
 
-        app.screen.action_back()
+        # Enter must not open peak detail
+        await pilot.press("enter")
         await pilot.pause(0.2)
         assert app._exception is None, app._exception
+        assert type(app.screen).__name__ != "PeakDetailScreen", type(app.screen)
+        # PeakDetailScreen should not be import-routed from screens for home
+        from surf_forecast.presentation.tui import screens as screens_mod
+
+        if hasattr(screens_mod, "PeakDetailScreen"):
+            raise AssertionError("PeakDetailScreen must be removed from screens module")
 
 
 def main() -> int:

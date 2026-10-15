@@ -19,7 +19,6 @@ from surf_forecast.application.forecast_service import (
 from surf_forecast.application.profile_service import list_profiles
 from surf_forecast.application.replay_service import load_fixture, replay_fixture, replay_snapshot
 from surf_forecast.domain.models import QueryMode, QueryRequest
-from surf_forecast.domain.presentation import CONDITION_LABELS, STATE_LABELS, spanish_reasons
 from surf_forecast.presentation.json_output import emit_error, emit_json, stderr
 from surf_forecast.paths import ensure_runtime_layout
 from surf_forecast.storage.snapshots import latest_snapshot, read_snapshot
@@ -231,6 +230,7 @@ def _cmd_fixtures(args: argparse.Namespace) -> int:
 
 def _print_forecast(payload: dict[str, Any]) -> None:
     print(f"Consulta {payload.get('query', {}).get('reference_time')}  snapshot {payload.get('snapshot_id')}")
+    print(f"schema {payload.get('schema_version')}")
     query_times = payload.get("query_times") or {}
     data_times = payload.get("data_times") or {}
     if query_times.get("executed_at_local"):
@@ -242,25 +242,31 @@ def _print_forecast(payload: dict[str, Any]) -> None:
         print(notice)
     print(payload.get("attribution", {}).get("text", ""))
     for day in payload.get("days", []):
+        brief = day.get("brief") or {}
+        label = brief.get("label") or ""
         title = day.get("display_title") or day.get("local_date")
-        print(f"\n{title}  {day.get('headline') or ''}")
-        rating = day.get("day_rating")
-        if rating:
-            print(f"  Valoración del día: {rating.get('score'):.1f}/5  ({rating.get('caption') or ''})")
-        elif day.get("day_rating_absent_reason"):
-            print(f"  Sin valoración — {day.get('day_rating_absent_reason')}")
-        analysis = day.get("day_analysis") or {}
-        if analysis.get("text"):
-            print(f"  Análisis: {analysis['text']}")
-        for peak in day.get("peaks", []):
-            mark = "*" if peak.get("best_of_day") else " "
-            label = peak.get("condition_label") or STATE_LABELS.get(peak.get("state"), peak.get("state"))
-            name = peak.get("display_name") or peak.get("peak_id")
-            peak_rating = peak.get("peak_rating")
-            score = f"  {peak_rating['score']:.1f}/5" if peak_rating else ""
-            print(f" {mark} {name:16} {label}{score}")
-            for reason in spanish_reasons(peak.get("reason_codes") or []):
-                print(f"     {reason}")
+        print(f"\n{label} · {title}")
+        if brief.get("condition_label"):
+            print(f"  Condición: {brief['condition_label']}")
+        height = brief.get("height") or {}
+        print(f"  Altura: {(height.get('display') if height else None) or 'n/d'}")
+        if brief.get("headline"):
+            print(f"  {brief['headline']}")
+        if brief.get("body"):
+            print(f"  {brief['body']}")
+        go = brief.get("go_window") or {}
+        if go.get("display"):
+            print(f"  Hora: {go['display']}")
+        else:
+            print("  Hora: sin hora clara")
+        spots = brief.get("worth_spots") or []
+        if spots:
+            names = ", ".join(s.get("display_name") or s.get("peak_id") for s in spots)
+            print(f"  Playas: {names}")
+        else:
+            print(f"  Playas: {brief.get('empty_spots_message') or 'Ningún pico claro para ir.'}")
+        if brief.get("caution"):
+            print(f"  Nota: {brief['caution']}")
 
 
 def _parse_now(value: str | None) -> datetime:

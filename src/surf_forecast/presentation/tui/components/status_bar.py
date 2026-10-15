@@ -27,5 +27,5 @@ class StatusBar(Static):
 
     def show(self, message: str) -> None:
         self._message = message
-        shortcuts = "Navigate: ↑↓ ←→ Enter  ·  Data: R o  ·  D Técnicos  ·  ?  ·  Q"
+        shortcuts = "← Hoy  → Mañana  ·  R actualizar  ·  o guardado  ·  ?  ·  Q"
         self.update(f"{message}  ·  {shortcuts}  ·  {ATTRIBUTION}")

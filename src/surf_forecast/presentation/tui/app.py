@@ -10,7 +10,7 @@ from textual.worker import Worker
 
 from surf_forecast.application.forecast_service import ForecastUnavailable, PersistenceError, run_forecast
 from surf_forecast.domain.models import QueryMode, QueryRequest
-from surf_forecast.presentation.tui.screens import DailyReportScreen, HelpScreen, PeakDetailScreen
+from surf_forecast.presentation.tui.screens import DailyReportScreen, HelpScreen
 
 
 class SurfForecastApp(App):
@@ -24,60 +24,14 @@ class SurfForecastApp(App):
         text-style: bold;
         border-bottom: solid #00a2fa;
     }
-    .day-title {
-        text-style: bold;
-        color: #00a2fa;
-        height: 1;
-        margin-top: 1;
+    #brief-row {
+        height: 1fr;
+        layout: horizontal;
+        padding: 1;
     }
-    #main { height: 1fr; layout: horizontal; }
-    #main.narrow { layout: vertical; }
-    #main.medium #legend-rail { display: none; }
-
-    #days-rail {
-        width: 26;
-        min-width: 20;
-        padding: 0 1;
+    #brief-row.stack {
+        layout: vertical;
     }
-    #main.narrow #days-rail {
-        width: 1fr;
-        height: auto;
-        max-height: 10;
-    }
-    #day-list { height: 1fr; }
-    #day-list > .list--highlight { background: #00a2fa; color: #0b1220; }
-
-    #report-body { width: 1fr; padding: 0 1; height: 1fr; }
-    #legend-rail {
-        width: 28;
-        padding: 0 1;
-    }
-    #main.narrow #legend-rail { display: none; }
-
-    .muted { color: #888888; }
-
-    #analysis-row { height: auto; min-height: 8; layout: horizontal; }
-    #day-analysis { width: 2fr; }
-    #day-rating { width: 1fr; min-width: 24; }
-    #main.narrow #analysis-row { layout: vertical; }
-    #main.narrow #day-rating { width: 1fr; min-width: 0; }
-
-    #peak-grid {
-        grid-size: 5;
-        grid-gutter: 1 1;
-        height: auto;
-        margin-top: 1;
-        margin-bottom: 1;
-    }
-    #peak-grid.cols-1 { grid-size: 1; }
-    #peak-grid.cols-3 { grid-size: 3; }
-    #peak-grid.cols-5 { grid-size: 5; }
-
-    #detail-body { padding: 0 1; height: 1fr; }
-    #detail-zones { height: auto; layout: horizontal; }
-    #detail-summary { width: 1fr; }
-    #detail-center { width: 2fr; }
-    #detail-meta { width: 1fr; }
     #help-frame { margin: 2 4; width: auto; }
     """
     TITLE = "SURF · LA PALOMA"
@@ -132,10 +86,6 @@ class SurfForecastApp(App):
         if result["mode"] == "stored_only":
             status = "Solo datos guardados"
         self.forecast_screen.show_payload(result["payload"], status)
-        for screen in self.screen_stack:
-            if isinstance(screen, PeakDetailScreen):
-                screen.payload = result["payload"]
-                screen._populate()
 
     def action_refresh(self) -> None:
         self.run_query(QueryMode.FORCE_REFRESH, "Actualizando datos…")

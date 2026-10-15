@@ -119,3 +119,5 @@ scripts/
 | **Schema 1.2.0 breaking change** | Shared contract must drop days 3–5 and ship DayBrief fields for TUI/CLI/JSON parity | TUI-only rewrite would leave CLI/JSON on the old technical narrative (clarify Q1 rejected) |
 
 > Note: Former VI “justified FAIL” removed — constitution **1.1.0** now permits personal advisory when/where briefs without wave/safety guarantees.
+
+**Implement note (T033)**: View-B-era widgets (`peak_card`, `evolution_table`, `technical_details`, detail `best_window` callout) remain in `components/` unused by home; kept for optional future diagnostic tooling. Interactive path is two DayBrief cards only.
