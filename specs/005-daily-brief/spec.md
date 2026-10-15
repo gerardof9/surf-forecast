@@ -12,6 +12,16 @@
 
 **Reference intent**: Match the *product shape* of Pronóstico Experto–style day cards (two day briefs, plain-language analysis, when/where)—not weather “Tiempo/Energía” metrics and not commercial branding.
 
+## Clarifications
+
+### Session 2026-10-15
+
+- Q: Where does the daily brief apply (TUI only vs shared presentation)? → A: Option B — Full shared presentation contract: DayBrief (headline, prose, go-window, worth spots) is part of the common presentation payload; TUI, CLI, and JSON all consume the same brief.
+- Q: What happens to peak detail (View B)? → A: Option A — Remove View B in this feature: home is only the two day cards; no peak detail screen.
+- Q: What about days 3–5 beyond Mañana? → A: Option B — Engine may still evaluate a longer horizon; shared presentation exposes only Hoy and Mañana (no days 3–5 in TUI/CLI/JSON).
+- Q: When multiple worth spots have different windows, which day timing is shown? → A: Option A — Use only the best worth-spot’s window (first in the ranked list).
+- Q: Where does the card’s large surfeable height come from? → A: Option A — Height range of the best worth-spot; if none qualify, show n/d / no clear height (do not use below-threshold peaks).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Open and know when/where today and tomorrow (Priority: P1)
@@ -25,7 +35,7 @@ As a personal La Paloma surfer, I open the app and immediately see **two day car
 **Acceptance Scenarios**:
 
 1. **Given** a successful report load, **When** the home view paints, **Then** exactly two day brief cards are shown (Hoy and Mañana) and no 5-day day list is present.
-2. **Given** Hoy and Mañana cards, **When** I read either card, **Then** I see: condition label, surfeable height range, one-line headline, multi-sentence plain analysis, a best-time phrase in local `HH:MM–HH:MM` (or an honest “sin pico claro / ventana amplia” wording), and a short list of worth-going beaches (or an explicit “ningún pico claro” message).
+2. **Given** Hoy and Mañana cards, **When** I read either card, **Then** I see: condition label, surfeable height from the best worth-spot (or honest n/d when none), one-line headline, multi-sentence plain analysis, a best-time phrase from that same best spot in local `HH:MM–HH:MM` (or honest “sin pico claro / ventana amplia” / no-beach wording), and a short list of worth-going beaches (or an explicit “ningún pico claro” message).
 3. **Given** the home view, **When** I scan for secondary chrome, **Then** there is no “PICOS DEL DÍA” section, no peak-card grid of all five peaks, and no LEYENDA / FR-017 legend rail.
 4. **Given** analysis text on a card, **When** I read it, **Then** it uses natural Spanish without technical prefixes (`≈` / `◇` / `!`) and without jargon as the main voice (no “Hs cruda”, “ventana de análisis”, “perfil provisional” as the lead story).
 
@@ -60,22 +70,22 @@ As a surfer, I want the best time stated simply (e.g. “mejor entre 06:00–09:
 
 1. **Given** a tight best window from the engine, **When** the card shows timing, **Then** primary text uses local `HH:MM–HH:MM` (not ISO-first, not “840 min”-led).
 2. **Given** a best window that spans nearly the whole analysis day, **When** timing renders, **Then** wording is honest (“ventana amplia” / “sin pico claro de hora”) plus `HH:MM–HH:MM`, not sold as a sharp peak hour.
-3. **Given** multiple worth spots with different windows, **When** the day timing line renders, **Then** it prioritizes the best spot’s window or states a plain combined phrase—without requiring the user to open five details.
+3. **Given** multiple worth spots with different windows, **When** the day timing line renders, **Then** it shows the best (first-ranked) worth-spot’s window only—not a merge or multi-spot combined phrase.
 
 ---
 
-### User Story 4 - Detail remains optional (Priority: P3)
+### User Story 4 - Home is the only interactive surface (Priority: P3)
 
-As a curious user, I may still open deeper peak or technical detail, but the home brief must stand alone. Detail is secondary, not required to answer when/where.
+As a personal user, I only need the two day briefs. There is **no** peak detail screen in this product shape—when/where lives entirely on Hoy/Mañana cards.
 
-**Why this priority**: Nice-to-have; home is the product.
+**Why this priority**: Confirms scope cut; avoids rebuilding View B while the home is rewritten.
 
-**Independent Test**: Complete a when/where decision on home alone; optionally open detail and return without losing the two-card home.
+**Independent Test**: After load, no Enter/navigation path opens a peak-detail view; quitting/help are the only non-home exits.
 
 **Acceptance Scenarios**:
 
-1. **Given** home only, **When** I decide whether to go today and where, **Then** I do not need the detail view.
-2. **Given** an optional detail entry point exists, **When** I open and leave it, **Then** I return to the two-card home without crash or forced legend/peak-grid chrome.
+1. **Given** the app after a successful load, **When** I use normal navigation (arrows, Enter, Esc, listed shortcuts), **Then** I never enter a peak-detail / View B screen.
+2. **Given** help or status shortcuts, **When** shown, **Then** they do not advertise opening peak detail or comparing a five-peak board.
 
 ---
 
@@ -84,6 +94,7 @@ As a curious user, I may still open deeper peak or technical detail, but the hom
 - **Both days poor**: Both cards still render; each says no clear beach / weak day; no invented swell story.
 - **Only Hoy available / Mañana incomplete**: Mañana card shows explicit missing/limited data; does not copy Hoy silently.
 - **Missing height or window**: Show `n/d` or honest omission; never fake zeros that look like measurements.
+- **No worth-spots**: Height and go-window both absent/clear empty; do not backfill from discarded peaks.
 - **Tied peaks**: Stable deterministic order (score then name); still respect the max-three cap.
 - **Narrow terminal**: Two cards stack vertically; text remains readable; no crash.
 - **Provisional / limited confidence**: May appear once as a short caution in the analysis, not as the headline voice.
@@ -93,26 +104,30 @@ As a curious user, I may still open deeper peak or technical detail, but the hom
 ### Functional Requirements
 
 - **FR-001**: Home MUST present exactly two day brief cards: **Hoy** and **Mañana** (local calendar days relative to the report).
+- **FR-001a**: The shared presentation output (TUI, CLI, and JSON) MUST expose DayBrief only for **Hoy** and **Mañana**. Days beyond Mañana MUST NOT appear in presentation channels even if the engine evaluated a longer horizon.
 - **FR-002**: Home MUST NOT show: a 5-day day rail, a “PICOS DEL DÍA” section, a grid of one card per peak for all peaks, or a LEYENDA / grade-legend rail.
 - **FR-003**: Each day card MUST include: condition (day-level), surfeable height summary, short headline, plain-language analysis body, best-time guidance, and worth-going spots (or empty-state).
+- **FR-003a**: Surfeable height on the card MUST be the derived height range of the **best (first-ranked) worth-spot**. If no worth-spot qualifies, height MUST be `n/d` / “sin altura clara”—MUST NOT pull height from below-threshold peaks.
 - **FR-004**: Home MUST NOT show Tiempo (weather) or Energía metrics; those concepts are out of scope.
 - **FR-005**: Analysis body MUST be natural Spanish suitable for a non-technical reader; MUST NOT lead with technical markers (`≈` / `◇` / `!`) or engine jargon as the primary voice.
 - **FR-006**: Best-time guidance MUST use local `HH:MM–HH:MM` when a window exists, with honest wording for wide/full-day windows.
+- **FR-006a**: When at least one worth-spot is listed, day-level go-window MUST be taken from the **best (first-ranked) worth-spot** only. When no worth-spot is listed, go-window MAY be omitted or stated as no clear beach/time—MUST NOT invent a window from below-threshold peaks.
 - **FR-007**: Worth-going spots MUST be filtered: include only peaks at or above the worth threshold; show at most three; exclude the rest from the home card.
 - **FR-008**: Worth threshold (default): peak condition/grade at least **fair** (or equivalent score band used by the existing day/peak rating vocabulary). Peaks below threshold MUST NOT appear on the home card.
 - **FR-009**: When no peak meets the threshold, the card MUST say no beach is clearly worth going; MUST NOT invent spots or upgrade grades to fill the list.
 - **FR-010**: The brief MAY explicitly recommend when and which beaches to prefer for personal decision support; it MUST still state that conditions are estimates, not guarantees of surfable waves or safety.
 - **FR-011**: Surfeable height on the card MUST remain a derived/estimated range (not presented as raw offshore Hs as breaking height).
 - **FR-012**: Existing evaluation outputs (grades, scores, `best_window`) MUST remain the factual basis; this feature rewrites presentation and narrative, not the core scoring formulas (unless a tiny threshold mapping is needed for FR-007/FR-008).
-- **FR-013**: Detail / secondary views are optional; the home brief MUST answer when/where without them.
+- **FR-013**: The interactive TUI for this feature MUST NOT include a peak-detail (View B) screen; when/where MUST be fully answered on the two day cards alone.
 - **FR-014**: Dual honesty of timestamps (data validity vs consultation time) MUST remain visible somewhere on home or card chrome.
 - **FR-015**: Keyboard/help copy on home MUST describe Hoy/Mañana navigation (if any) and MUST NOT instruct users to compare five peak cards or open a legend that no longer exists.
+- **FR-016**: DayBrief fields (headline, plain analysis, go-window text, worth spots, condition, height summary) MUST be produced once in the shared presentation contract so TUI, CLI, and JSON expose the same brief content (channel-specific layout only; no divergent technical narrative on other channels).
 
 ### Key Entities
 
-- **DayBrief**: One calendar day summary for home—condition, height summary, headline, analysis prose, go-window text, ordered worth spots, timestamps/meta needed for honesty.
+- **DayBrief**: One calendar day summary in the shared presentation contract (rendered as home cards in TUI and as equivalent day sections in CLI/JSON)—condition, height from best worth-spot (or n/d), headline, analysis prose, go-window from that same spot (or absent), ordered worth spots, timestamps/meta needed for honesty.
 - **WorthSpot**: A beach/peak that passed the worth filter—display name, optional short reason, optional rank order.
-- **GoWindow**: Human-facing timing guidance derived from engine best-window (tight vs wide semantics).
+- **GoWindow**: Human-facing timing guidance derived from the best worth-spot’s engine best-window (tight vs wide semantics); absent when no worth-spot qualifies.
 - **DayCondition**: Existing day-level rating vocabulary reused as the card’s condition pill/label.
 
 ## Success Criteria *(mandatory)*
@@ -122,6 +137,7 @@ As a curious user, I may still open deeper peak or technical detail, but the hom
 - **SC-001**: On first paint of a normal report, a first-time user can state (a) whether Hoy is worth considering, (b) a preferred time window, and (c) up to three beach names—without opening detail—within one short read of the Hoy card.
 - **SC-002**: In fixtures where only one peak is worth going, 100% of home spot lists for that day show that single beach and zero of the below-threshold peaks.
 - **SC-003**: Home chrome checklist: zero occurrences of sections titled PICOS DEL DÍA or LEYENDA; zero 5-peak comparable card grids on home.
+- **SC-006**: Presented day count is exactly two (Hoy, Mañana) in TUI, CLI, and JSON for a normal successful report.
 - **SC-004**: In a side-by-side review of 5 sample days, reviewers rate the analysis as “plain language / actionable” rather than “technical log” for at least 4 of 5 days.
 - **SC-005**: Wide-window days never present a large minute count as the primary timing message; tight windows always show local clock times.
 
@@ -129,11 +145,13 @@ As a curious user, I may still open deeper peak or technical detail, but the hom
 
 - Target user is the project owner (personal, non-commercial); Spanish UI copy.
 - “Mañana” means the next local calendar day after Hoy in the report, not a second speculative model.
+- Longer engine horizons (days 3–5) may still be computed for internal reuse; they are omitted from all presentation channels in this feature.
 - Worth threshold defaults to fair-or-better in the existing grade vocabulary; max three spots is enough.
 - Tiempo/Energía and expert photo/branding from third-party sites are explicitly out of scope.
-- View B / technical evolution remains available only as optional secondary navigation if already present; redesign of detail is not the focus of this feature.
+- Peak-detail View B is **removed** from the interactive product for this feature (not merely de-emphasized). Technical evolution tables are out of the interactive path; raw evaluation data may still exist internally for building DayBrief.
 - Constitution Principle VI is **narrowly relaxed for home copy**: the app may say “conviene ir a X a la hora Y” as personal advisory language, while Principle V/VIII honesty (no guarantees, no invented data, no Hs-as-breaking) still binds.
 - Specs `003` / `004` remain historical for engine/visual craft; **home information architecture follows this `005` spec**.
+- Presentation channels share one DayBrief; only chrome/layout differs by channel.
 
 ## Constitution Constraints *(mandatory alignment)*
 
