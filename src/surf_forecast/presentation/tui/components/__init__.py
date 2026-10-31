@@ -7,6 +7,7 @@ from surf_forecast.presentation.tui.components.day_brief_card import DayBriefCar
 from surf_forecast.presentation.tui.components.evolution_table import EvolutionTable
 from surf_forecast.presentation.tui.components.frame import Frame
 from surf_forecast.presentation.tui.components.header_bar import Banner, header_text, window_completed_banner
+from surf_forecast.presentation.tui.components.home_sections import AnalysisSection, SpotsSection
 from surf_forecast.presentation.tui.components.peak_card import PeakCard
 from surf_forecast.presentation.tui.components.rating_hero import RatingHero
 from surf_forecast.presentation.tui.components.status_bar import StatusBar
@@ -14,6 +15,7 @@ from surf_forecast.presentation.tui.components.technical_details import Technica
 
 __all__ = [
     "AnalysisPanel",
+    "AnalysisSection",
     "Badge",
     "Banner",
     "BestWindowCallout",
@@ -22,6 +24,7 @@ __all__ = [
     "Frame",
     "PeakCard",
     "RatingHero",
+    "SpotsSection",
     "StatusBar",
     "StatusPill",
     "TechnicalDetails",

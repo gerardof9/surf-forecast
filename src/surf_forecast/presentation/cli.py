@@ -43,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
         if command == "tui":
             from surf_forecast.presentation.tui.app import run_tui
 
-            return run_tui()
+            return run_tui(demo=bool(getattr(args, "demo", False)))
         if command == "forecast":
             return _cmd_forecast(args)
         if command == "detail":
@@ -69,7 +69,12 @@ def main(argv: list[str] | None = None) -> int:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="surf_forecast")
     sub = parser.add_subparsers(dest="command")
-    sub.add_parser("tui")
+    tui = sub.add_parser("tui")
+    tui.add_argument(
+        "--demo",
+        action="store_true",
+        help="Render TUI from fixed payload (no network)",
+    )
     forecast = sub.add_parser("forecast")
     _add_common(forecast)
     forecast.add_argument("--refresh", action="store_true")
@@ -245,28 +250,45 @@ def _print_forecast(payload: dict[str, Any]) -> None:
         brief = day.get("brief") or {}
         label = brief.get("label") or ""
         title = day.get("display_title") or day.get("local_date")
-        print(f"\n{label} · {title}")
-        if brief.get("condition_label"):
-            print(f"  Condición: {brief['condition_label']}")
+        print(f"\n{label} · {title}  [{brief.get('condition_label') or '—'}]")
         height = brief.get("height") or {}
-        print(f"  Altura: {(height.get('display') if height else None) or 'n/d'}")
-        if brief.get("headline"):
-            print(f"  {brief['headline']}")
-        if brief.get("body"):
-            print(f"  {brief['body']}")
-        go = brief.get("go_window") or {}
-        if go.get("display"):
-            print(f"  Hora: {go['display']}")
+        print(f"  Tamaño: {(height.get('display') if height else None) or 'n/d'}")
+        metrics = brief.get("metrics") or {}
+        wind = metrics.get("wind") or {}
+        wind_line = wind.get("display") or wind.get("dir_display")
+        if wind_line:
+            print(f"  Viento: {wind_line}")
+        swell_rows = metrics.get("swell") or []
+        if swell_rows:
+            bits = []
+            for row in swell_rows:
+                d = row.get("dir_label")
+                p = row.get("period_display")
+                if p is None and row.get("period_s") is not None:
+                    p = f"{int(round(float(row['period_s'])))} s"
+                if d and p:
+                    bits.append(f"del {d} · período {p}")
+                elif d:
+                    bits.append(f"del {d}")
+                elif p:
+                    bits.append(f"período {p}")
+            if bits:
+                print(f"  Oleaje: {' · '.join(bits)}")
+        analysis = brief.get("analysis") or brief.get("body")
+        if analysis:
+            print(f"  Análisis: {analysis}")
+        best = brief.get("best_peak")
+        if best and best.get("display_name"):
+            print(f"  Mejor opcion: * {best['display_name']}")
         else:
-            print("  Hora: sin hora clara")
-        spots = brief.get("worth_spots") or []
-        if spots:
-            names = ", ".join(s.get("display_name") or s.get("peak_id") for s in spots)
-            print(f"  Playas: {names}")
-        else:
-            print(f"  Playas: {brief.get('empty_spots_message') or 'Ningún pico claro para ir.'}")
-        if brief.get("caution"):
-            print(f"  Nota: {brief['caution']}")
+            print(f"  Mejor opción: {brief.get('empty_spots_message') or 'no determinada'}")
+        fav = brief.get("favorable_window") or brief.get("go_window")
+        if fav and fav.get("display"):
+            print(f"  Franja favorable: {fav['display']}")
+        extras = brief.get("worth_spots") or []
+        others = [s for s in extras[1:] if s.get("display_name")]
+        if others:
+            print(f"  También: {', '.join(s['display_name'] for s in others)}")
 
 
 def _parse_now(value: str | None) -> datetime:

@@ -28,11 +28,15 @@ def _check_formatters() -> None:
     size = format_size_dict({"minimum_m": 0.97, "maximum_m": 1.3579999999999999})
     assert "357999" not in size, size
     assert "," in size or "n/d" in size, size
-    assert format_period_s(None) == "Período n/d"
-    assert format_period_s(0) == "0 s"
+    assert format_period_s(None) == "—"
+    assert format_period_s(0) == "—"
     stars = format_stars(2.5)
-    assert "★" in stars and "☆" in stars
+    assert stars == "★★☆☆☆", stars
+    assert "◐" not in stars
     assert "*" not in stars
+    from surf_forecast.presentation.tui.formatters import format_stars_from_grade
+
+    assert format_stars_from_grade("good") == "★★★★☆"
     assert format_hhmm_local("2026-10-16T06:00:00-03:00") == "06:00"
     wide = format_best_window(
         {
@@ -94,17 +98,30 @@ async def _run_app_smoke() -> None:
 
         # Dual timestamps (FR-014)
         header = _collect_text(app.forecast_screen.query_one("#report-header"))
-        if "Consulta" not in header and "consulta" not in header.lower():
-            # header_text uses "Consulta:"
-            if "Consulta:" not in header:
-                raise AssertionError(f"missing consultation timestamp in header: {header!r}")
-        if "Datos" not in header and "meteorológ" not in header.lower():
-            if "Datos meteorológicos:" not in header:
-                raise AssertionError(f"missing data timestamp in header: {header!r}")
+        if "Consulta:" not in header and "consulta" not in header.lower():
+            raise AssertionError(f"missing consultation timestamp in header: {header!r}")
+        if "Datos:" not in header and "datos" not in header.lower():
+            raise AssertionError(f"missing data timestamp in header: {header!r}")
 
         cards = list(app.forecast_screen.query(DayBriefCard))
         if len(cards) != 2:
             raise AssertionError(f"expected 2 DayBriefCard, got {len(cards)}")
+
+        from surf_forecast.presentation.tui.components.home_sections import (
+            AnalysisSection,
+            SpotsSection,
+        )
+
+        if not list(app.forecast_screen.query(AnalysisSection)):
+            raise AssertionError("missing AnalysisSection")
+        if not list(app.forecast_screen.query(SpotsSection)):
+            raise AssertionError("missing SpotsSection")
+        if "EVALUACIÓN ORIENTATIVA" in text:
+            raise AssertionError("EVALUACIÓN ORIENTATIVA must be absent")
+        if "PICOS DE LA PALOMA" not in text:
+            raise AssertionError("expected PICOS DE LA PALOMA section")
+        if SurfForecastApp.ENABLE_COMMAND_PALETTE:
+            raise AssertionError("command palette must stay disabled")
 
         # Enter must not open peak detail
         await pilot.press("enter")

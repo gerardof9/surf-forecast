@@ -7,12 +7,19 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from surf_forecast.domain.day_rating import build_day_rating, build_peak_rating
-from surf_forecast.domain.evolution_samples import direction_label, representative_wind, sample_evolution
+from surf_forecast.domain.evaluation import circular_delta
+from surf_forecast.domain.evolution_samples import (
+    direction_label,
+    direction_label_16,
+    representative_wind,
+    sample_evolution,
+)
 from surf_forecast.domain.models import (
     GRADE_ORDER,
     DaySummary,
     ForecastResult,
     ForecastState,
+    NormalizedWindHour,
     PeakDayForecast,
     PeakProfile,
     SourceDescriptor,
@@ -21,29 +28,21 @@ from surf_forecast.domain.models import (
     isoformat_utc,
 )
 from surf_forecast.domain.narrative import build_day_brief, build_peak_analysis
-from surf_forecast.domain.windows import URUGUAY_TZ
+from surf_forecast.domain.presentation_labels import (
+    CONDITION_LABELS,
+    STATE_LABELS,
+    is_analysis_band_window,
+    wind_intensity_label,
+)
+from surf_forecast.domain.windows import URUGUAY_TZ, slot_in_calendar_analysis_window
 
 SCHEMA_VERSION = "1.2.0"
 
 WORTH_MIN_GRADE = SurfGrade.FAIR
 WORTH_MAX = 3
+# Same facing family only (e.g. S with S; never E with S).
+ORIENTATION_COMPAT_MAX_DEG = 45.0
 EMPTY_SPOTS_MESSAGE = "Ningún pico claro para ir."
-
-# FR-017 compact vocabulary (engine ids unchanged).
-CONDITION_LABELS = {
-    "no_surfable_waves": "Pocas olas",
-    "small_but_surfable": "Variable",
-    "fair": "Surfeable",
-    "good": "Buena oportunidad",
-    "very_good": "Buena oportunidad",
-}
-
-STATE_LABELS = {
-    "resolved": "Resuelto",
-    "uncertain": "Incierto",
-    "incomplete_forecast": "Pronóstico incompleto",
-    "analysis_window_completed": "Ventana de análisis finalizada",
-}
 
 REASON_LABELS = {
     "range_crosses_threshold": "El rango estimado cruza 0,5 m",
@@ -94,9 +93,17 @@ class ForecastPresentation:
 
 def condition_or_state_label(condition: str | None, state: ForecastState | str) -> str:
     if condition:
-        return CONDITION_LABELS.get(condition, condition)
+        return CONDITION_LABELS.get(condition) or STATE_LABELS.get(
+            state.value if isinstance(state, ForecastState) else str(state),
+            "Sin condición",
+        )
     state_value = state.value if isinstance(state, ForecastState) else state
-    return STATE_LABELS.get(state_value, state_value)
+    return STATE_LABELS.get(state_value, "Sin condición")
+
+
+def orientations_compatible(left_deg: float, right_deg: float) -> bool:
+    """True when two peaks face the same swell family (not contrapuestas)."""
+    return circular_delta(left_deg, right_deg) <= ORIENTATION_COMPAT_MAX_DEG
 
 
 def rank_worth_spots(
@@ -104,7 +111,7 @@ def rank_worth_spots(
     *,
     profile_by_id: dict[str, PeakProfile],
 ) -> list[dict[str, Any]]:
-    """Fair+ peaks only, best-first, max WORTH_MAX."""
+    """Fair+ peaks only, best-first, max WORTH_MAX, same orientation family."""
     candidates: list[tuple[int, float, str, PeakDayForecast]] = []
     min_rank = GRADE_ORDER.index(WORTH_MIN_GRADE)
     for peak in peaks:
@@ -119,22 +126,38 @@ def rank_worth_spots(
         score = float(rating["score"]) if rating else float(rank)
         candidates.append((rank, score, peak.peak_id, peak))
     candidates.sort(key=lambda item: (-item[0], -item[1], item[2]))
-    out: list[dict[str, Any]] = []
-    for _, _, _, peak in candidates[:WORTH_MAX]:
+    if not candidates:
+        return []
+
+    def _spot(peak: PeakDayForecast) -> dict[str, Any]:
         profile = profile_by_id.get(peak.peak_id)
         name = profile.name if profile else peak.peak_id.replace("_", " ").title()
         cond = peak.condition.value if peak.condition else None
-        out.append(
-            {
-                "peak_id": peak.peak_id,
-                "display_name": name,
-                "condition": cond,
-                "condition_label": condition_or_state_label(cond, peak.state),
-                "reason_short": "Mejor ventana" if not out else None,
-            }
-        )
-    if out:
-        out[0]["reason_short"] = "Mejor opción del día"
+        return {
+            "peak_id": peak.peak_id,
+            "display_name": name,
+            "condition": cond,
+            "condition_label": condition_or_state_label(cond, peak.state),
+            "reason_short": None,
+        }
+
+    best_peak = candidates[0][3]
+    best_profile = profile_by_id.get(best_peak.peak_id)
+    best_orient = best_profile.orientation_deg if best_profile is not None else None
+    out: list[dict[str, Any]] = [_spot(best_peak)]
+    if best_orient is None:
+        # Without orientation we cannot vouch for extras.
+        return out
+
+    for _, _, _, peak in candidates[1:]:
+        if len(out) >= WORTH_MAX:
+            break
+        profile = profile_by_id.get(peak.peak_id)
+        if profile is None:
+            continue
+        if not orientations_compatible(best_orient, profile.orientation_deg):
+            continue
+        out.append(_spot(peak))
     return out
 
 
@@ -148,31 +171,37 @@ def height_summary_from_peak(peak: PeakDayForecast | None) -> dict[str, Any] | N
         "maximum_m": size.maximum_m,
         "display": display,
         "kind": "derived",
+        "caption": "Rango estimado de ola surfeable",
     }
 
 
-def go_window_from_peak(peak: PeakDayForecast | None) -> dict[str, Any] | None:
+def favorable_window_from_peak(peak: PeakDayForecast | None) -> dict[str, Any] | None:
+    """Franja favorable backed by the engine — never the full analysis band 06:00–20:00."""
     if peak is None or peak.best_window is None:
         return None
     window = peak.best_window
     start = window.start_at.astimezone(URUGUAY_TZ).strftime("%H:%M")
     end = window.end_at.astimezone(URUGUAY_TZ).strftime("%H:%M")
     mins = int(window.duration_minutes or 0)
-    wide = mins >= 6 * 60 or (start == "06:00" and end == "20:00")
-    if wide:
-        display = f"Ventana amplia (día completo) {start}–{end}"
-    else:
-        display = f"Mejor entre {start}–{end}"
+    if is_analysis_band_window(start, end, mins):
+        # Analysis band ≠ favorable fringe — omit the block.
+        return None
+    display = f"{start}–{end}"
     return {
         "start_local": start,
         "end_local": end,
-        "wide": wide,
+        "wide": False,
         "display": display,
         "source_peak_id": peak.peak_id,
         "duration_minutes": mins,
         "start_at": isoformat_utc(window.start_at),
         "end_at": isoformat_utc(window.end_at),
     }
+
+
+def go_window_from_peak(peak: PeakDayForecast | None) -> dict[str, Any] | None:
+    """Alias kept for older callers — same as favorable_window_from_peak."""
+    return favorable_window_from_peak(peak)
 
 
 def build_presentation(result: ForecastResult) -> ForecastPresentation:
@@ -193,6 +222,7 @@ def build_presentation(result: ForecastResult) -> ForecastPresentation:
             profiles=profiles,
             sources_ok=sources_ok,
             incomplete=incomplete,
+            wind_hours=result.wind_hours,
         )
         for day, label, incomplete, fallback_date in presented
     ]
@@ -271,6 +301,7 @@ def _day_brief_out(
     profiles: list[PeakProfile],
     sources_ok: bool,
     incomplete: bool,
+    wind_hours: list[NormalizedWindHour] | None = None,
 ) -> dict[str, Any]:
     if day is None or incomplete:
         stub = DaySummary(
@@ -287,7 +318,7 @@ def _day_brief_out(
             stub,
             profiles=profiles,
             worth_spots=[],
-            go_window=None,
+            favorable_window=None,
             height=None,
             sources_ok=sources_ok,
             incomplete=True,
@@ -296,18 +327,19 @@ def _day_brief_out(
             "local_date": stub.local_date,
             "display_title": _display_title(stub.local_date),
             "state": stub.state.value,
-            "brief": {
-                "label": label,
-                "condition": None,
-                "condition_label": STATE_LABELS["incomplete_forecast"],
-                "headline": narrative["headline"],
-                "body": narrative["body"],
-                "caution": narrative["caution"],
-                "height": None,
-                "go_window": None,
-                "worth_spots": [],
-                "empty_spots_message": EMPTY_SPOTS_MESSAGE,
-            },
+            "day_rating": None,
+            "day_rating_absent_reason": "incomplete_forecast",
+            "brief": _assemble_brief(
+                label=label,
+                condition=None,
+                condition_label=STATE_LABELS["incomplete_forecast"],
+                height=None,
+                favorable_window=None,
+                worth_spots=[],
+                narrative=narrative,
+                metrics=None,
+                rating=None,
+            ),
         }
 
     worth = rank_worth_spots(day.peaks, profile_by_id=profile_by_id)
@@ -315,18 +347,30 @@ def _day_brief_out(
     if worth:
         best_id = worth[0]["peak_id"]
         best_peak = next((p for p in day.peaks if p.peak_id == best_id), None)
-    height = height_summary_from_peak(best_peak)
-    go_window = go_window_from_peak(best_peak)
+    if best_peak is None and day.peaks:
+        # Metrics may still come from the best resolved peak even without worth spots.
+        resolved = [p for p in day.peaks if p.state is ForecastState.RESOLVED and p.condition]
+        if resolved:
+            best_peak = max(resolved, key=lambda p: GRADE_ORDER.index(p.condition))  # type: ignore[arg-type]
+    height = height_summary_from_peak(best_peak if worth else None)
+    window_done = (
+        day.state is ForecastState.ANALYSIS_WINDOW_COMPLETED
+        or day.headline_code == "analysis_window_completed"
+    )
+    # Closed analysis day: do not invent/show a new favorable fringe.
+    favorable = None if window_done else favorable_window_from_peak(best_peak if worth else None)
     narrative = build_day_brief(
         day,
         profiles=profiles,
         worth_spots=worth,
-        go_window=go_window,
+        favorable_window=favorable,
         height=height,
+        best_peak=best_peak if worth else None,
         sources_ok=sources_ok,
         incomplete=False,
     )
     rating, absent = build_day_rating(day)
+    metrics = day_meteo_metrics(day, peak=best_peak, wind_hours=wind_hours or [])
     condition = None
     if rating and rating.get("source_peak_id"):
         src = next((p for p in day.peaks if p.peak_id == rating["source_peak_id"]), None)
@@ -341,18 +385,206 @@ def _day_brief_out(
         "state": day.state.value,
         "day_rating": rating,
         "day_rating_absent_reason": absent,
-        "brief": {
-            "label": label,
-            "condition": condition,
-            "condition_label": condition_or_state_label(condition, day.state),
-            "headline": narrative["headline"],
-            "body": narrative["body"],
-            "caution": narrative["caution"],
-            "height": height,
-            "go_window": go_window,
-            "worth_spots": worth,
-            "empty_spots_message": None if worth else EMPTY_SPOTS_MESSAGE,
-        },
+        "brief": _assemble_brief(
+            label=label,
+            condition=condition,
+            condition_label=condition_or_state_label(condition, day.state),
+            height=height,
+            favorable_window=favorable,
+            worth_spots=worth,
+            narrative=narrative,
+            metrics=metrics,
+            rating=rating,
+        ),
+    }
+
+
+def day_meteo_metrics(
+    day: DaySummary,
+    *,
+    peak: PeakDayForecast | None,
+    wind_hours: list[NormalizedWindHour] | None = None,
+) -> dict[str, Any] | None:
+    """Structured swell/wind rows for day cards — only from real samples."""
+    swell_rows: list[dict[str, Any]] = []
+    if peak is not None:
+        seen_dirs: set[str] = set()
+        for slot in peak.reference_slots:
+            dir_label = direction_label(slot.swell_direction_deg)
+            period = slot.period_s
+            if dir_label is None and period is None:
+                continue
+            key = dir_label or "?"
+            if key in seen_dirs:
+                continue
+            seen_dirs.add(key)
+            swell_rows.append(
+                {
+                    "dir_label": dir_label,
+                    "period_s": period,
+                    "period_display": f"{int(round(period))} s" if period is not None else None,
+                }
+            )
+            if len(swell_rows) >= 2:
+                break
+
+    wind_block = _wind_metrics_for_day(day, wind_hours=wind_hours or [])
+
+    if not swell_rows and wind_block is None:
+        return None
+    return {"swell": swell_rows, "wind": wind_block}
+
+
+def _wind_metrics_for_day(
+    day: DaySummary,
+    *,
+    wind_hours: list[NormalizedWindHour],
+) -> dict[str, Any] | None:
+    """Direction + speed range for the day (Lineup-style), backed by hourly wind."""
+    day_hours = [
+        hour
+        for hour in wind_hours
+        if hour.speed_kmh is not None
+        and slot_in_calendar_analysis_window(hour.valid_at, day.local_date)
+    ]
+    day_hours.sort(key=lambda hour: hour.valid_at)
+
+    rotation = day.wind_rotation or {}
+    start_i = wind_intensity_label(rotation.get("start_intensity"))
+    end_i = wind_intensity_label(rotation.get("end_intensity"))
+
+    if len(day_hours) >= 2:
+        mid = max(1, len(day_hours) // 2)
+        early, late = day_hours[:mid], day_hours[mid:]
+        early_seg = _wind_segment(early)
+        late_seg = _wind_segment(late)
+        if early_seg is None and late_seg is None:
+            return None
+        display = _format_wind_evolution(early_seg, late_seg)
+        return {
+            "display": display,
+            "dir_display": display,  # primary card line includes km/h
+            "intensity_display": _intensity_pair(start_i, end_i),
+            "start_dir": early_seg["dir"] if early_seg else None,
+            "end_dir": late_seg["dir"] if late_seg else None,
+            "start_speed_min_kmh": early_seg["min_kmh"] if early_seg else None,
+            "start_speed_max_kmh": early_seg["max_kmh"] if early_seg else None,
+            "end_speed_min_kmh": late_seg["min_kmh"] if late_seg else None,
+            "end_speed_max_kmh": late_seg["max_kmh"] if late_seg else None,
+            "start_intensity": start_i,
+            "end_intensity": end_i,
+        }
+
+    # Fallback: rotation dirs only (no speeds available)
+    start_d = direction_label_16(rotation.get("start_direction_deg")) or direction_label(
+        rotation.get("start_direction_deg")
+    )
+    end_d = direction_label_16(rotation.get("end_direction_deg")) or direction_label(
+        rotation.get("end_direction_deg")
+    )
+    if not (start_d or end_d or start_i or end_i):
+        return None
+    if start_d and end_d and start_d != end_d:
+        dir_display = f"{start_d} → {end_d}"
+    else:
+        dir_display = start_d or end_d
+    return {
+        "display": dir_display,
+        "dir_display": dir_display,
+        "intensity_display": _intensity_pair(start_i, end_i),
+        "start_dir": start_d,
+        "end_dir": end_d,
+        "start_intensity": start_i,
+        "end_intensity": end_i,
+    }
+
+
+def _wind_segment(hours: list[NormalizedWindHour]) -> dict[str, Any] | None:
+    if not hours:
+        return None
+    speeds = [float(h.speed_kmh) for h in hours if h.speed_kmh is not None]
+    if not speeds:
+        return None
+    # Representative direction: mean of degrees via unit vectors would be nicer;
+    # for display use the mid sample's 16-point label.
+    mid = hours[len(hours) // 2]
+    dir_lab = direction_label_16(mid.direction_deg) or direction_label(mid.direction_deg)
+    lo = int(round(min(speeds)))
+    hi = int(round(max(speeds)))
+    if hi < lo:
+        lo, hi = hi, lo
+    return {"dir": dir_lab, "min_kmh": lo, "max_kmh": hi}
+
+
+def _format_wind_evolution(
+    early: dict[str, Any] | None,
+    late: dict[str, Any] | None,
+) -> str:
+    def _seg(seg: dict[str, Any]) -> str:
+        direction = seg.get("dir") or "—"
+        lo, hi = seg["min_kmh"], seg["max_kmh"]
+        if lo == hi:
+            return f"{direction} {lo} km/h"
+        return f"{direction} {lo}–{hi} km/h"
+
+    if early and late:
+        left, right = _seg(early), _seg(late)
+        if left == right:
+            return left
+        # Same dir: collapse to full-day range when labels match
+        if early.get("dir") and early.get("dir") == late.get("dir"):
+            lo = min(early["min_kmh"], late["min_kmh"])
+            hi = max(early["max_kmh"], late["max_kmh"])
+            direction = early["dir"]
+            if lo == hi:
+                return f"{direction} {lo} km/h"
+            return f"{direction} {lo}–{hi} km/h"
+        return f"{left} → {right}"
+    if early:
+        return _seg(early)
+    if late:
+        return _seg(late)
+    return "n/d"
+
+
+def _intensity_pair(start_i: str | None, end_i: str | None) -> str | None:
+    if start_i and end_i and start_i != end_i:
+        return f"{start_i.capitalize()} → {end_i}"
+    if start_i or end_i:
+        return (start_i or end_i or "").capitalize()
+    return None
+
+
+def _assemble_brief(
+    *,
+    label: str,
+    condition: str | None,
+    condition_label: str,
+    height: dict[str, Any] | None,
+    favorable_window: dict[str, Any] | None,
+    worth_spots: list[dict[str, Any]],
+    narrative: dict[str, Any],
+    metrics: dict[str, Any] | None = None,
+    rating: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        "label": label,
+        "condition": condition,
+        "condition_label": narrative.get("condition_label") or condition_label,
+        "height": height,
+        "metrics": metrics,
+        "rating": rating,
+        "analysis": narrative.get("analysis") or narrative.get("body"),
+        "best_peak": narrative.get("best_peak"),
+        "favorable_window": favorable_window,
+        "limitations": narrative.get("limitations") or [],
+        # legacy aliases (consumers / smoke)
+        "headline": narrative.get("headline"),
+        "body": narrative.get("analysis") or narrative.get("body"),
+        "caution": (narrative.get("limitations") or [None])[0],
+        "go_window": favorable_window,
+        "worth_spots": worth_spots,
+        "empty_spots_message": None if worth_spots else EMPTY_SPOTS_MESSAGE,
     }
 
 

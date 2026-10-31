@@ -466,6 +466,7 @@ class SlotEvaluation:
     reason_codes: list[str] = field(default_factory=list)
     # Display pass-through (not used by threshold logic).
     period_s: float | None = None
+    swell_direction_deg: float | None = None
 
 
 @dataclass

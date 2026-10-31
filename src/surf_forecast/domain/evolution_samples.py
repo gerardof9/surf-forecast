@@ -23,6 +23,32 @@ def direction_label(degrees: float | None) -> str | None:
     return sectors[idx]
 
 
+def direction_label_16(degrees: float | None) -> str | None:
+    """16-point compass for wind display (SSW, SSE, …) — closer to surf-report wording."""
+    if degrees is None:
+        return None
+    sectors = [
+        "N",
+        "NNE",
+        "NE",
+        "ENE",
+        "E",
+        "ESE",
+        "SE",
+        "SSE",
+        "S",
+        "SSW",
+        "SW",
+        "WSW",
+        "W",
+        "WNW",
+        "NW",
+        "NNW",
+    ]
+    idx = int((degrees % 360) / 22.5 + 0.5) % 16
+    return sectors[idx]
+
+
 def sample_evolution(peak: PeakDayForecast) -> list[dict[str, Any]]:
     by_band: dict[str, SlotEvaluation] = {}
     for slot in peak.reference_slots:

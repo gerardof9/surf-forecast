@@ -20,24 +20,38 @@ def format_score_num(score: float) -> str:
 
 
 def format_stars(score: float | None) -> str:
+    """Legacy score path — rounds down to whole stars (no half glyphs)."""
     if score is None:
         return ""
-    value = max(0.0, min(5.0, float(score)))
-    full = int(value)
-    half = (value - full) >= 0.5
-    empty = 5 - full - (1 if half else 0)
-    return "★" * full + ("◐" if half else "") + "☆" * empty
+    full = max(0, min(5, int(float(score))))
+    return "★" * full + "☆" * (5 - full)
+
+
+def format_stars_from_grade(condition: str | None) -> str:
+    """Stars derived only from grade (brief §7)."""
+    from surf_forecast.domain.presentation_labels import stars_for_grade
+
+    n = stars_for_grade(condition)
+    if n is None:
+        return "—"
+    return "★" * n + "☆" * (5 - n)
 
 
 def format_meters_range(minimum_m: float | None, maximum_m: float | None) -> str:
     if minimum_m is not None and maximum_m is not None:
-        return f"{float(minimum_m):.1f}–{float(maximum_m):.1f} m".replace(".", ",")
-    return "n/d"
+        lo = float(minimum_m)
+        hi = float(maximum_m)
+        lo_s = f"{lo:.1f}".replace(".", ",")
+        hi_s = f"{hi:.1f}".replace(".", ",")
+        if lo_s == hi_s:
+            return f"{lo_s} m"
+        return f"{lo_s}–{hi_s} m"
+    return "—"
 
 
 def format_meters_point(point_m: float | None, *, approx: bool = False) -> str:
     if point_m is None:
-        return "n/d"
+        return "—"
     prefix = "~" if approx else ""
     return f"{prefix}{float(point_m):.1f} m".replace(".", ",")
 
@@ -48,13 +62,16 @@ def format_size_dict(size: dict[str, Any] | None) -> str:
         return format_meters_range(size.get("minimum_m"), size.get("maximum_m"))
     if size.get("point_m") is not None:
         return format_meters_point(size.get("point_m"), approx=True)
-    return "Tamaño n/d"
+    return "—"
 
 
 def format_period_s(period: float | None) -> str:
     if period is None:
-        return "Período n/d"
-    return f"{int(round(float(period)))} s"
+        return "—"
+    value = int(round(float(period)))
+    if value <= 0:
+        return "—"
+    return f"{value} s"
 
 
 def format_wind(
@@ -167,12 +184,10 @@ def format_header(
     status: str,
     horizon: str,
 ) -> str:
-    data = data_updated or "No disponible"
+    data = data_updated or "n/d"
     query = query_local or "—"
-    return (
-        f"SURF · LA PALOMA   ·   Pronóstico {horizon}\n"
-        f"Datos meteorológicos: {data}   ·   Consulta: {query}   ·   {status}"
-    )
+    # Compact single-purpose header (app title lives in the window chrome).
+    return f"Pronóstico {horizon}   ·   Datos: {data}   ·   Consulta: {query}   ·   {status}"
 
 
 def format_day_chip(day: dict[str, Any]) -> str:
@@ -197,19 +212,42 @@ def format_day_chip(day: dict[str, Any]) -> str:
 
 
 def condition_role(label: str | None) -> str:
+    """Map visible label / chip text → CSS role class."""
     text = (label or "").lower()
-    if "buena" in text:
-        return "cond-good"
-    if "surfeable" in text:
-        return "cond-fair"
-    if "variable" in text:
-        return "cond-variable"
-    if "pocas" in text:
-        return "cond-poor"
+    if "muy buena" in text:
+        return "cond-muy-buena"
+    if text == "buena" or text.startswith("buena"):
+        return "cond-buena"
+    if "razonable" in text:
+        return "cond-razonable"
+    if "pequeñ" in text:
+        return "cond-pequenas"
+    if "sin olas" in text or "sin datos" in text:
+        return "cond-sin-olas"
     if "incierto" in text:
         return "cond-uncertain"
-    if "incompleto" in text:
+    if "incompleto" in text or "cerrada" in text:
         return "cond-incomplete"
-    if "ventana" in text:
-        return "cond-window"
+    # Legacy mockup labels (transitional)
+    if "oportunidad" in text:
+        return "cond-buena"
+    if "surfeable" in text:
+        return "cond-razonable"
+    if "variable" in text:
+        return "cond-pequenas"
+    if "pocas" in text:
+        return "cond-sin-olas"
     return "cond-neutral"
+
+
+def condition_role_from_id(condition: str | None) -> str:
+    mapping = {
+        "very_good": "cond-muy-buena",
+        "good": "cond-buena",
+        "fair": "cond-razonable",
+        "small_but_surfable": "cond-pequenas",
+        "no_surfable_waves": "cond-sin-olas",
+    }
+    if not condition:
+        return "cond-neutral"
+    return mapping.get(str(condition).strip().lower(), "cond-neutral")

@@ -1,4 +1,4 @@
-"""TUI screens: two-card daily brief home (schema 1.2.0)."""
+"""TUI screens: Lineup-style daily brief home (schema 1.2.0)."""
 
 from __future__ import annotations
 
@@ -6,17 +6,18 @@ from typing import Any
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Footer, Static
+from textual.widgets import Static
 
 from surf_forecast.paths import config_dir
 from surf_forecast.presentation.tui.components import DayBriefCard, Frame, StatusBar, header_text
+from surf_forecast.presentation.tui.components.home_sections import AnalysisSection, SpotsSection
 from surf_forecast.presentation.tui.theme import SHARED_GRID
 
 
 class DailyReportScreen(Screen):
-    """Home — Hoy / Mañana DayBrief cards only."""
+    """Home — compact day cards + analysis + spots for focused day."""
 
     BINDINGS = [
         Binding("left", "focus_hoy", "Hoy", show=True),
@@ -35,11 +36,13 @@ class DailyReportScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Static("", id="report-header", markup=False)
-        with Horizontal(id="brief-row"):
-            yield DayBriefCard(id="card-hoy")
-            yield DayBriefCard(id="card-manana")
+        with Vertical(id="home-body"):
+            with Horizontal(id="brief-row"):
+                yield DayBriefCard(id="card-hoy")
+                yield DayBriefCard(id="card-manana")
+            yield AnalysisSection(id="analysis-section")
+            yield SpotsSection(id="spots-section")
         yield StatusBar(self._status_text, id="status")
-        yield Footer()
 
     def on_mount(self) -> None:
         self._apply_width(self.size.width)
@@ -52,6 +55,7 @@ class DailyReportScreen(Screen):
         row.remove_class("stack")
         if width < 90:
             row.add_class("stack")
+        self._apply_focus_chrome()
 
     def show_payload(self, payload: dict[str, Any], status: str) -> None:
         self.payload = payload
@@ -82,11 +86,35 @@ class DailyReportScreen(Screen):
         self.query_one("#card-manana", DayBriefCard).set_day(manana)
         self._apply_focus_chrome()
 
+    def _focused_day(self) -> dict[str, Any]:
+        days = (self.payload or {}).get("days") or []
+        if not days:
+            return {}
+        idx = min(self._focus_index, len(days) - 1)
+        return days[idx] or {}
+
+    def _narrow(self) -> bool:
+        try:
+            return self.size.width < 90
+        except Exception:
+            return False
+
     def _apply_focus_chrome(self) -> None:
         hoy = self.query_one("#card-hoy", DayBriefCard)
         manana = self.query_one("#card-manana", DayBriefCard)
         hoy.set_focused(self._focus_index == 0)
         manana.set_focused(self._focus_index == 1)
+        # Narrow: show only the focused day so analysis/spots stay above the fold.
+        if self._narrow():
+            hoy.display = self._focus_index == 0
+            manana.display = self._focus_index == 1
+        else:
+            hoy.display = True
+            manana.display = True
+        days = (self.payload or {}).get("days") or []
+        # Hoy + Mañana always get their own analysis (Mañana is first-class).
+        self.query_one("#analysis-section", AnalysisSection).set_days(list(days[:2]))
+        self.query_one("#spots-section", SpotsSection).set_days(list(days[:2]))
 
     def action_focus_hoy(self) -> None:
         self._focus_index = 0
@@ -109,14 +137,12 @@ class HelpScreen(ModalScreen):
             [
                 "Ayuda — SURF · LA PALOMA",
                 "",
-                "Home: dos tarjetas — Hoy y Mañana (brief diario).",
+                "Compará Hoy y Mañana en las tarjetas superiores.",
+                "El análisis y PICOS DE LA PALOMA muestran ambos días.",
+                "",
                 "Navegación:  ← Hoy   → Mañana",
                 "Acciones:    R actualizar   o solo guardado   Q salir",
                 "",
-                "Cada tarjeta resume condición, altura estimada, prosa,",
-                "mejor hora y playas que valen la pena (fair+).",
-                "",
-                "No hay pantalla de detalle de pico ni leyenda FR-017.",
                 "Las recomendaciones son estimaciones, no garantías de olas",
                 "ni de seguridad en el agua.",
                 "",

@@ -163,6 +163,7 @@ def evaluate_slot(
             state=ForecastState.INCOMPLETE_FORECAST,
             reason_codes=["missing_required_input"],
             period_s=None,
+            swell_direction_deg=None,
         )
     size = size_estimate(marine.wave_height_m, criteria)
     state, ceiling = ceiling_from_size(size, criteria)
@@ -218,6 +219,9 @@ def evaluate_slot(
         state=state,
         reason_codes=reasons,
         period_s=period_s,
+        swell_direction_deg=marine.swell_direction_deg
+        if marine.swell_direction_deg is not None
+        else marine.wave_direction_deg,
     )
 
 
